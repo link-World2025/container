@@ -1,98 +1,97 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Logistics Simulator Pro - Layer Control</title>
+    <title>輸出車両積載シミュレーター</title>
     <style>
         :root {
             --primary: #3b82f6;
             --accent: #10b981;
             --danger: #ef4444;
             --bg: #0f172a;
-            --panel: rgba(30, 41, 59, 0.9);
+            --panel: rgba(30, 41, 59, 0.95);
             --text: #f8fafc;
         }
 
-        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); touch-action: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: var(--bg); color: var(--text); touch-action: none; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
         
         .panel { 
             pointer-events: auto; background: var(--panel); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4); width: 280px;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 280px;
         }
 
-        .header { font-weight: 800; font-size: 18px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: var(--accent); }
+        .header { font-weight: 800; font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: var(--accent); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
         
         .history-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-icon { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 20px; }
+        .btn-icon { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 18px; }
         .btn-icon:disabled { opacity: 0.2; }
 
         .filter-row { display: flex; gap: 5px; margin-top: 10px; }
-        .btn-filter { flex: 1; background: #1e293b; color: white; border: 1px solid #334155; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .btn-filter { flex: 1; background: #1e293b; color: white; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; }
         .btn-filter.active { border-color: var(--accent); background: rgba(16, 185, 129, 0.2); }
 
-        #edit-panel { display: none; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-top: 10px; border: 1px solid var(--accent); }
+        #edit-panel { display: none; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid var(--accent); }
         .field { margin-bottom: 10px; }
-        .field label { display: block; font-size: 11px; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px; }
-        .field input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 6px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; }
+        .field label { display: block; font-size: 10px; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px; }
+        .field input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 4px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; font-size: 14px; }
 
         .controls-bottom { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
         
         button.main { 
-            background: var(--primary); color: white; border: none; padding: 14px 24px; 
-            border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s;
+            background: var(--primary); color: white; border: none; padding: 14px 20px; 
+            border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;
         }
-        button.secondary { background: #334155; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; }
+        button.secondary { background: #334155; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 12px; }
         
-        .alert-toast { background: var(--danger); color: white; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; text-align: center; margin-top: 15px; display: none; border: 1px solid #fff; }
+        .alert-toast { background: var(--danger); color: white; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; text-align: center; margin-top: 15px; display: none; border: 1px solid rgba(255,255,255,0.5); }
     </style>
 </head>
 <body>
 
 <div id="ui-layer">
     <div class="panel">
-        <div class="header"><span>🚜</span> Logistics Pro</div>
+        <div class="header"><span>🇯🇵</span> 物流積載シミュレーター</div>
         
         <div class="history-row">
-            <button class="btn-icon" onclick="undo()">⤺</button>
-            <button class="btn-icon" onclick="redo()">⤻</button>
+            <button class="btn-icon" onclick="undo()" title="元に戻す">⤺</button>
+            <button class="btn-icon" onclick="redo()" title="やり直し">⤻</button>
         </div>
 
-        <div style="font-size: 11px; opacity: 0.6; text-transform: uppercase; margin-bottom: 5px;">Visualizar Níveis:</div>
+        <div style="font-size: 10px; opacity: 0.6; margin-bottom: 5px;">表示レイヤー切替:</div>
         <div class="filter-row">
-            <button id="fPiso" class="btn-filter active" onclick="toggleNivel('Piso')">1º ANDAR (PISO)</button>
-            <button id="fTopo" class="btn-filter active" onclick="toggleNivel('Topo')">2º ANDAR (TOPO)</button>
+            <button id="fPiso" class="btn-filter active" onclick="toggleNivel('Piso')">1階 (床面)</button>
+            <button id="fTopo" class="btn-filter active" onclick="toggleNivel('Topo')">2階 (上段)</button>
         </div>
 
-        <button class="secondary" style="width:100%; margin-top:15px;" onclick="toggleCotas()">📏 Medidas Técnicas</button>
+        <button class="secondary" style="width:100%; margin-top:15px; font-weight: bold;" onclick="toggleCotas()">📏 寸法線表示 (ON/OFF)</button>
         
         <div id="edit-panel">
-            <div class="field"><label>Nome do Veículo</label><input type="text" id="iNome"></div>
+            <div class="field"><label>車両識別名</label><input type="text" id="iNome"></div>
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
-                <div class="field"><label>C(cm)</label><input type="number" id="iC"></div>
-                <div class="field"><label>L(cm)</label><input type="number" id="iL"></div>
-                <div class="field"><label>A(cm)</label><input type="number" id="iA"></div>
+                <div class="field"><label>長さ(cm)</label><input type="number" id="iC"></div>
+                <div class="field"><label>幅(cm)</label><input type="number" id="iL"></div>
+                <div class="field"><label>高さ(cm)</label><input type="number" id="iA"></div>
             </div>
-            <button class="main" style="width:100%; background: var(--accent);" onclick="confirmarEdicao()">Salvar</button>
+            <button class="main" style="width:100%; background: var(--accent);" onclick="confirmarEdicao()">設定を保存</button>
         </div>
 
-        <button class="secondary" style="width:100%; margin-top:10px; font-size: 11px; opacity: 0.8;" onclick="toggleWalls()">👁️ Paredes Metálicas</button>
-        <div id="alert-toast" class="alert-toast">⚠️ CONFLITO DE CARGA</div>
+        <div id="alert-toast" class="alert-toast">⚠️ 衝突または範囲外エラー</div>
     </div>
 
     <div class="controls-bottom">
         <div class="btn-group">
-            <button class="main" style="background: var(--accent)" onclick="addTrator('Piso')">+ Trator Piso</button>
-            <button class="main" style="background: var(--primary)" onclick="addTrator('Topo')">+ Trator Topo</button>
+            <button class="main" style="background: var(--accent)" onclick="addTrator('Piso')">+ 下段車両追加</button>
+            <button class="main" style="background: var(--primary)" onclick="addTrator('Topo')">+ 上段車両追加</button>
         </div>
         <div class="btn-group">
-            <button class="main" style="background: #1e293b" onclick="showEdit()">⚙️ Editar</button>
-            <button class="main" style="background: #6366f1" onclick="girar()">↻ Girar</button>
-            <button class="secondary" onclick="exportar()">💾 Exportar</button>
+            <button class="main" style="background: #1e293b" onclick="showEdit()">⚙️ 編集</button>
+            <button class="main" style="background: #6366f1" onclick="girar()">↻ 回転</button>
+            <button class="secondary" onclick="exportar()">💾 データ出力</button>
         </div>
     </div>
 </div>
@@ -110,6 +109,7 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+    // コンテナサイズ（メートル）
     const C_COMP = 5.90, C_LARG = 2.35, C_ALT = 2.39;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
@@ -127,18 +127,16 @@
 
     const listaTratores = [];
     const gCotas = new THREE.Group(); scene.add(gCotas);
-    let visCotas = false;
-    let visPiso = true;
-    let visTopo = true;
+    let visCotas = false, visPiso = true, visTopo = true;
 
-    // --- ESTRUTURA ---
+    // --- コンテナ構造（梁のみ） ---
     const vigas = new THREE.Group();
-    const beamMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6 });
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.2 });
     const createB = (w,h,d,x,y,z) => {
         const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), beamMat);
         m.position.set(x,y,z); vigas.add(m);
     }
-    const bt = 0.08;
+    const bt = 0.06;
     createB(bt, C_ALT, bt, 0, C_ALT/2, -C_LARG/2); createB(bt, C_ALT, bt, 0, C_ALT/2, C_LARG/2);
     createB(bt, C_ALT, bt, C_COMP, C_ALT/2, -C_LARG/2); createB(bt, C_ALT, bt, C_COMP, C_ALT/2, C_LARG/2);
     createB(C_COMP, bt, bt, C_COMP/2, 0, -C_LARG/2); createB(C_COMP, bt, bt, C_COMP/2, 0, C_LARG/2);
@@ -147,43 +145,39 @@
     createB(bt, bt, C_LARG, 0, C_ALT, 0); createB(bt, bt, C_LARG, C_COMP, C_ALT, 0);
     scene.add(vigas);
 
-    const paredes = [];
-    const pMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
-    const addP = (w,h,d,x,y,z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), pMat); m.position.set(x,y,z); scene.add(m); paredes.push(m); }
-    addP(C_COMP, 0.01, C_LARG, C_COMP/2, 0, 0); addP(0.01, C_ALT, C_LARG, 0, C_ALT/2, 0);
-    addP(C_COMP, C_ALT, 0.01, C_COMP/2, C_ALT/2, -C_LARG/2); addP(C_COMP, C_ALT, 0.01, C_COMP/2, C_ALT/2, C_LARG/2);
-    window.toggleWalls = () => paredes.forEach(p => p.visible = !p.visible);
+    // 床面のみ視覚化
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(C_COMP, C_LARG), new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }));
+    floor.rotation.x = Math.PI/2; floor.position.set(C_COMP/2, 0, 0); scene.add(floor);
 
-    // --- LABELS E COTAS ---
+    // --- 寸法線とラベル ---
     function genLabel(txt, corBg = '#10b981') {
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
         can.width = 512; can.height = 128;
-        ctx.fillStyle = corBg; ctx.roundRect ? ctx.roundRect(0,0,512,128,20) : ctx.fillRect(0,0,512,128); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 256, 80);
+        ctx.fillStyle = corBg; ctx.roundRect ? ctx.roundRect(0,0,512,128,15) : ctx.fillRect(0,0,512,128); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 48px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 256, 82);
         return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(can), transparent: true });
     }
 
     function addDim(p1, p2, txt, cor = 0xffffff) {
         const g = new THREE.Group();
-        const mat = new THREE.LineBasicMaterial({ color: cor });
-        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), mat));
+        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), new THREE.LineBasicMaterial({ color: cor })));
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
         can.width = 256; can.height = 128;
-        ctx.fillStyle = cor === 0x3b82f6 ? '#3b82f6' : '#fff'; 
-        ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can) }));
-        spr.position.copy(p1).lerp(p2, 0.5); spr.position.y += 0.4; spr.scale.set(1.0, 0.5, 1);
+        spr.position.copy(p1).lerp(p2, 0.5); spr.position.y += 0.4; spr.scale.set(1.1, 0.55, 1);
         g.add(spr); return g;
     }
 
     function refreshCotas() {
         gCotas.clear(); if (!visCotas) return;
+        // コンテナ全幅・全高
         gCotas.add(addDim(new THREE.Vector3(0,-0.8, C_LARG/2+0.8), new THREE.Vector3(C_COMP,-0.8, C_LARG/2+0.8), "5.90m", 0x3b82f6));
-        gCotas.add(addDim(new THREE.Vector3(-0.5, 0, -C_LARG/2), new THREE.Vector3(-0.5, 0, C_LARG/2), "2.35m", 0x3b82f6));
-        gCotas.add(addDim(new THREE.Vector3(-0.5, 0, -C_LARG/2-0.5), new THREE.Vector3(-0.5, C_ALT, -C_LARG/2-0.5), "2.39m", 0x3b82f6));
+        gCotas.add(addDim(new THREE.Vector3(-0.6, 0, -C_LARG/2), new THREE.Vector3(-0.6, 0, C_LARG/2), "2.35m", 0x3b82f6));
+        gCotas.add(addDim(new THREE.Vector3(-0.6, 0, -C_LARG/2-0.6), new THREE.Vector3(-0.6, C_ALT, -C_LARG/2-0.6), "2.39m", 0x3b82f6));
         
         listaTratores.forEach(t => {
-            if (!t.visible) return; // Só mostra cota se o trator estiver visível
+            if (!t.visible) return;
             const {w, h, d} = t.userData.dim; const p = t.position;
             const mw = w/100, mh = h/100, md = d/100;
             gCotas.add(addDim(new THREE.Vector3(p.x-mw/2, p.y+mh+0.3, p.z), new THREE.Vector3(p.x+mw/2, p.y+mh+0.3, p.z), mw.toFixed(2)+"m"));
@@ -192,24 +186,15 @@
         });
     }
 
-    // --- FILTRAR NÍVEIS ---
     window.toggleNivel = (n) => {
         const btn = n === 'Piso' ? document.getElementById('fPiso') : document.getElementById('fTopo');
-        if (n === 'Piso') visPiso = !visPiso;
-        if (n === 'Topo') visTopo = !visTopo;
-
+        if (n === 'Piso') visPiso = !visPiso; else visTopo = !visTopo;
         btn.classList.toggle('active');
-        
-        listaTratores.forEach(t => {
-            if (t.userData.nivel === n) {
-                t.visible = (n === 'Piso') ? visPiso : visTopo;
-            }
-        });
+        listaTratores.forEach(t => { if (t.userData.nivel === n) t.visible = (n === 'Piso' ? visPiso : visTopo); });
         refreshCotas();
     };
 
-    // --- LOGICA TRATORES ---
-    function criarT(nivel, nome="Trator", w=175, h=118, d=115) {
+    function criarT(nivel, nome="車両", w=175, h=118, d=115) {
         const g = new THREE.Group();
         const rack = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x8b4513, wireframe: true, opacity: 0.1, transparent: true }));
         rack.position.y = 0.5; g.add(rack);
@@ -217,23 +202,19 @@
         const body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.4, 0.95), new THREE.MeshStandardMaterial({ color: cor }));
         body.position.y = 0.2; g.add(body);
         const lMat = genLabel(nome, nivel === 'Piso' ? '#10b981' : '#3b82f6');
-        const labels = [];
-        const labelGeo = new THREE.PlaneGeometry(0.95, 0.3);
+        const labels = []; const labelGeo = new THREE.PlaneGeometry(0.95, 0.3);
         const addL = (rx, ry, px, py, pz) => { 
             const l = new THREE.Mesh(labelGeo, lMat); l.rotation.set(rx, ry, 0); l.position.set(px, py, pz); g.add(l); labels.push(l);
         }
         addL(-Math.PI/2, 0, 0, 1.05, 0); addL(0, 0, 0, 0.6, 0.51); addL(0, Math.PI, 0, 0.6, -0.51); addL(0, Math.PI/2, 0.51, 0.6, 0); addL(0, -Math.PI/2, -0.51, 0.6, 0);
         g.userData = { nivel, corOrig: cor, body, labels, dim: { w, h, d }, nome };
         g.scale.set(w/100, h/100, d/100);
-        
-        // Aplica visibilidade inicial baseada no filtro
         g.visible = (nivel === 'Piso') ? visPiso : visTopo;
-        
         return g;
     }
 
     window.addTrator = (n) => {
-        const t = criarT(n, "Veículo " + (listaTratores.length + 1));
+        const t = criarT(n, "車両 " + (listaTratores.length + 1));
         t.position.set(1.5, n === 'Topo' ? 1.2 : 0, 0);
         scene.add(t); listaTratores.push(t);
         selecionado = t; refreshCotas(); saveState();
@@ -250,8 +231,7 @@
 
     window.confirmarEdicao = () => {
         if (!selecionado) return;
-        const n = document.getElementById('iNome').value;
-        const w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value);
+        const n = document.getElementById('iNome').value, w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value);
         selecionado.userData.nome = n; selecionado.userData.dim = {w, h, d};
         selecionado.scale.set(w/100, h/100, d/100);
         if (selecionado.userData.nivel === 'Topo') selecionado.position.y = h/100;
@@ -261,7 +241,7 @@
         document.getElementById('edit-panel').style.display = 'none';
     }
 
-    // --- INTERAÇÃO ---
+    // --- インタラクション ---
     let selecionado = null, dragging = false;
     const ray = new THREE.Raycaster(); const m = new THREE.Vector2();
     const plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
@@ -271,7 +251,6 @@
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
         m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1;
         ray.setFromCamera(m, camera);
-        // Só permite selecionar se o trator estiver VISÍVEL
         const hits = ray.intersectObjects(listaTratores.filter(t => t.visible), true);
         if (hits.length > 0) {
             controls.enabled = false; dragging = true;
@@ -301,6 +280,7 @@
     window.girar = () => { if(selecionado) { selecionado.rotation.y += Math.PI/2; refreshCotas(); checkCol(); saveState(); } };
     window.toggleCotas = () => { visCotas = !visCotas; refreshCotas(); };
 
+    // 履歴管理
     let history = [], hIdx = -1;
     function saveState() {
         if (hIdx < history.length - 1) history = history.slice(0, hIdx + 1);
@@ -336,10 +316,10 @@
     }
 
     window.exportar = () => {
-        let txt = "MAPA DE CARGA PRO\n";
-        listaTratores.forEach((t, i) => txt += `${i+1}. ${t.userData.nome} [${t.userData.nivel}] | Medidas: ${t.userData.dim.w}x${t.userData.dim.h}x${t.userData.dim.d}cm\n`);
+        let txt = "車両積載リスト - EXPORT\n";
+        listaTratores.forEach((t, i) => txt += `${i+1}. ${t.userData.nome} [${t.userData.nivel === 'Piso' ? '下段' : '上段'}] | サイズ: ${t.userData.dim.w}x${t.userData.dim.h}x${t.userData.dim.d}cm\n`);
         const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([txt], {type: 'text/plain'}));
-        link.download = 'layout_export.txt'; link.click();
+        link.download = 'loading_report.txt'; link.click();
     };
 
     function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
