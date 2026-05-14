@@ -10,12 +10,12 @@
             --bg: #0f172a; --panel: rgba(30, 41, 59, 0.95); --text: #f8fafc;
             --wood: #a16207; --save: #ec4899;
         }
-        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); touch-action: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Inter', 'Meiryo', sans-serif; background: var(--bg); color: var(--text); touch-action: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
         .panel { pointer-events: auto; background: var(--panel); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; width: 280px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
         .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .btn-icon { flex: 1; background: #334155; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 18px; }
-        .btn-icon:disabled { opacity: 0.2; }
+        .btn-icon:disabled { opacity: 0.1; cursor: not-allowed; }
         .filter-btn { flex: 1; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: bold; }
         .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.1); }
         #edit-panel { display: none; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--primary); }
@@ -37,11 +37,10 @@
         <div style="color:var(--accent); font-weight:800; margin-bottom:10px;">CONTAINER PUZZLE</div>
         
         <div class="btn-row">
-            <button class="btn-icon" onclick="undo()">⤺</button>
-            <button class="btn-icon" onclick="redo()">⤻</button>
+            <button id="btnUndo" class="btn-icon" onclick="undo()" title="元に戻す">⤺</button>
+            <button id="btnRedo" class="btn-icon" onclick="redo()" title="やり直し">⤻</button>
         </div>
 
-        <!-- Gerenciamento de Arquivos -->
         <div class="btn-row">
             <button class="filter-btn" style="background: var(--save); color: white;" onclick="saveToFile()">💾 保存</button>
             <button class="filter-btn" style="background: #4b5563; color: white;" onclick="document.getElementById('fileInput').click()">📂 読込</button>
@@ -54,7 +53,7 @@
         </div>
 
         <button id="btnMode" class="mode-toggle" onclick="toggleMoveMode()">↔️ 水平移動モード</button>
-        <button class="filter-btn" style="width:100%; margin-top:10px; color: #00e5ff;" onclick="toggleDim()">📏 寸法線を表示 (CAD)</button>
+        <button class="filter-btn" style="width:100%; margin-top:10px; color: #00e5ff;" onclick="toggleDim()">📏 車両寸法を表示 (CAD)</button>
 
         <div id="edit-panel">
             <div class="inp-g"><label>名称</label><input type="text" id="iN"></div>
@@ -66,18 +65,18 @@
             <button class="main" style="width:100%; background:var(--accent); margin-top:5px;" onclick="saveEdit()">設定保存</button>
             <button class="main" style="width:100%; background:var(--danger); margin-top:5px; font-size:10px;" onclick="deleteSelected()">🗑️ 削除</button>
         </div>
-        <div id="alert" class="alert">⚠️ 積載警告: 接触中</div>
+        <div id="alert" class="alert">⚠️ 積載エラー (衝突または範囲外)</div>
     </div>
 
     <div class="controls-bottom">
         <div class="btn-group">
             <button class="main" style="background:var(--wood)" onclick="addWood()">+ 角材追加 (9x9cm)</button>
-            <button class="main" style="background:var(--accent)" onclick="addVehicle('Piso')">+ 下段車両追加</button>
-            <button class="main" style="background:var(--primary)" onclick="addVehicle('Topo')">+ 上段車両追加</button>
+            <button class="main" style="background:var(--accent)" onclick="addVehicle('Piso')">+ 下段追加</button>
+            <button class="main" style="background:var(--primary)" onclick="addVehicle('Topo')">+ 上段追加</button>
         </div>
         <div class="btn-group">
             <button class="main" style="background:#475569" onclick="showEdit()">⚙️ 編集</button>
-            <button class="main" style="background:#8b5cf6" onclick="toggleVertical()">📐 縦/横 変更</button>
+            <button class="main" style="background:#8b5cf6" onclick="toggleVertical()">📐 縦/横</button>
             <button class="main" style="background:#d97706" onclick="copyVehicle()">📋 コピー</button>
             <button class="main" style="background:#6366f1" onclick="rotate()">↻ 回転</button>
         </div>
@@ -92,6 +91,7 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+    // Configuração 40ft HC
     const C_C = 12.03, C_L = 2.35, C_A = 2.69;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
@@ -105,7 +105,7 @@
     scene.add(new THREE.AmbientLight(0xffffff, 1.2));
     const light = new THREE.PointLight(0xffffff, 150); light.position.set(6, 10, 6); scene.add(light);
 
-    // Estrutura
+    // Vigas do Container
     const vigas = new THREE.Group();
     const beamMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
     const addB = (w,h,d,x,y,z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), beamMat); m.position.set(x,y,z); vigas.add(m); }
@@ -119,6 +119,7 @@
     const gDim = new THREE.Group(); scene.add(gDim);
     let showDim = false, moveY = false, vis1 = true, vis2 = true, selecionado = null;
 
+    // --- FUNÇÕES VISUAIS ---
     function genLabel(txt, cor = '#10b981') {
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
         can.width = 512; can.height = 128; ctx.fillStyle = cor; ctx.fillRect(0,0,512,128);
@@ -131,8 +132,7 @@
         const matLine = new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true });
         g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), matLine));
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
-        can.width = 256; can.height = 128; 
-        ctx.fillStyle = (cor === 0x00e5ff) ? '#00e5ff' : '#ffb700'; 
+        can.width = 256; can.height = 128; ctx.fillStyle = (cor === 0x00e5ff) ? '#00e5ff' : '#ffb700'; 
         ctx.font = 'bold 45px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can), depthTest: false, transparent: true }));
         spr.position.copy(p1).lerp(p2, 0.5); spr.position.y += 0.2; spr.scale.set(1.2, 0.6, 1);
@@ -153,100 +153,113 @@
         });
     }
 
-    window.toggleLayer = (layer) => {
-        if (layer === 'Piso') vis1 = !vis1; else vis2 = !vis2;
-        document.getElementById(layer === 'Piso' ? 'f1' : 'f2').classList.toggle('active');
-        vehicles.forEach(v => { if(v.userData.layer === layer) v.visible = (layer === 'Piso' ? vis1 : vis2); });
-        window.updateDim();
-    }
-
     function createObj(layer, nome, w_cm, h_cm, d_cm, type="vehicle") {
         const g = new THREE.Group();
         const w = w_cm/100, h = h_cm/100, d = d_cm/100;
         let cor = (layer === 'Piso') ? 0x10b981 : 0x3b82f6;
         if (type === "wood") cor = 0xa16207;
-
         const bodyGeo = new THREE.BoxGeometry(w, h, d);
         bodyGeo.translate(0, h/2, 0); 
         const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: cor }));
         g.add(body);
-
         const lMat = genLabel(nome, (type === "wood") ? '#a16207' : (layer === 'Piso' ? '#10b981' : '#3b82f6'));
-        const geoLabel = new THREE.PlaneGeometry(Math.max(w*0.4, 0.1), 0.15);
+        const geoL = new THREE.PlaneGeometry(Math.max(w*0.4, 0.15), 0.15);
         const addL = (rx, ry, px, py, pz) => { 
-            const l = new THREE.Mesh(geoLabel, lMat); l.rotation.set(rx, ry, 0); l.position.set(px, py, pz); g.add(l);
+            const l = new THREE.Mesh(geoL, lMat); l.rotation.set(rx, ry, 0); l.position.set(px, py, pz); g.add(l);
         }
         addL(-Math.PI/2, 0, 0, h + 0.01, 0);
         addL(0, 0, 0, h/2, d/2 + 0.01);
         addL(0, Math.PI, 0, h/2, -d/2 - 0.01);
-
         g.userData = { layer, corOrig: cor, body, type, dim: { w: w_cm, h: h_cm, d: d_cm }, nome };
         g.visible = (layer === 'Piso' ? vis1 : vis2);
         return g;
     }
 
-    // --- SALVAR E CARREGAR ---
+    // --- LÓGICA DE SALVAR/CARREGAR (ARQUIVOS) ---
     window.saveToFile = () => {
-        const data = vehicles.map(v => ({
-            n: v.userData.nome,
-            l: v.userData.layer,
-            t: v.userData.type,
-            d: v.userData.dim,
-            p: { x: v.position.x, y: v.position.y, z: v.position.z },
-            r: v.rotation.y
-        }));
+        const data = vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: { x: v.position.x, y: v.position.y, z: v.position.z }, r: v.rotation.y }));
         const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `Project_${new Date().getTime()}.json`;
-        a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `Plan_${new Date().getTime()}.json`; a.click();
     };
 
-    window.loadFromFile = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+    window.loadFromFile = (e) => {
+        const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => loadData(e.target.result);
+        reader.onload = (ev) => { loadData(ev.target.result); saveState(); };
         reader.readAsText(file);
     };
 
     function loadData(jsonStr) {
+        if (!jsonStr) return;
         try {
             const data = JSON.parse(jsonStr);
+            // Limpa atual
             vehicles.forEach(v => scene.remove(v));
             vehicles.length = 0;
-            data.forEach(item => {
-                const obj = createObj(item.l, item.n, item.d.w, item.d.h, item.d.d, item.t);
-                obj.position.set(item.p.x, item.p.y, item.p.z);
-                obj.rotation.y = item.r;
-                scene.add(obj);
-                vehicles.push(obj);
+            // Reconstrói
+            data.forEach(i => {
+                const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t);
+                obj.position.set(i.p.x, i.p.y, i.p.z);
+                obj.rotation.y = i.r;
+                scene.add(obj); vehicles.push(obj);
             });
             window.updateDim(); checkCol();
-        } catch (err) { alert("Erro ao carregar arquivo!"); }
+        } catch (err) { console.error("Load error", err); }
     }
 
-    function autoSave() {
-        const data = vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y }));
-        localStorage.setItem('sim_autosave', JSON.stringify(data));
+    // --- SISTEMA DE HISTÓRICO (UNDO/REDO) ESTÁVEL ---
+    let history = [], hIdx = -1;
+    function saveState() {
+        // Se mudarmos algo, deletamos o futuro do Redo
+        if (hIdx < history.length - 1) history = history.slice(0, hIdx + 1);
+        const snapshot = JSON.stringify(vehicles.map(v => ({
+            n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim,
+            p: { x: v.position.x, y: v.position.y, z: v.position.z }, r: v.rotation.y
+        })));
+        history.push(snapshot);
+        hIdx = history.length - 1;
+        updateHistBtns();
+        localStorage.setItem('sim_autosave', snapshot);
     }
 
-    // --- FUNÇÕES DE INTERFACE ---
+    window.undo = () => {
+        if (hIdx > 0) {
+            hIdx--;
+            loadData(history[hIdx]);
+            updateHistBtns();
+        }
+    };
+
+    window.redo = () => {
+        if (hIdx < history.length - 1) {
+            hIdx++;
+            loadData(history[hIdx]);
+            updateHistBtns();
+        }
+    };
+
+    function updateHistBtns() {
+        document.getElementById('btnUndo').disabled = (hIdx <= 0);
+        document.getElementById('btnRedo').disabled = (hIdx >= history.length - 1);
+    }
+
+    // --- INTERAÇÃO ---
     window.addVehicle = (l) => {
-        const v = createObj(l, "車両 " + (vehicles.length + 1), 175, 118, 115, "vehicle");
-        v.position.set(1.5, l === 'Topo' ? 1.20 : 0.01, 0);
+        const v = createObj(l, "車両 " + (vehicles.length + 1), 175, 118, 115);
+        v.position.set(2, l === 'Topo' ? 1.2 : 0.01, 0);
         scene.add(v); vehicles.push(v); selecionado = v;
         window.updateDim(); checkCol(); saveState();
-    }
+    };
 
     window.addWood = () => {
-        const len = prompt("角材の長さを入力してください (cm):", "200");
+        const len = prompt("角材の長さを入力(cm):", "200");
         if (!len || isNaN(len)) return;
         const v = createObj("Piso", "角材", parseFloat(len), 9, 9, "wood");
-        v.position.set(2.0, 0.01, 0);
+        v.position.set(2, 0.01, 0);
         scene.add(v); vehicles.push(v); selecionado = v;
         window.updateDim(); checkCol(); saveState();
-    }
+    };
 
     window.deleteSelected = () => {
         if (!selecionado) return;
@@ -255,49 +268,40 @@
         selecionado = null;
         document.getElementById('edit-panel').style.display = 'none';
         window.updateDim(); checkCol(); saveState();
-    }
+    };
 
     window.toggleVertical = () => {
         if (!selecionado) return;
         const d = selecionado.userData.dim;
         const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type, name = selecionado.userData.nome;
         scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1);
-        const novo = createObj(lay, name, d.h, d.w, d.d, type);
-        novo.position.copy(pos); novo.rotation.copy(rot);
-        scene.add(novo); vehicles.push(novo); selecionado = novo;
+        const n = createObj(lay, name, d.h, d.w, d.d, type);
+        n.position.copy(pos); n.rotation.copy(rot);
+        scene.add(n); vehicles.push(n); selecionado = n;
         window.updateDim(); checkCol(); saveState();
-    }
+    };
 
     window.copyVehicle = () => {
         if (!selecionado) return;
         const d = selecionado.userData;
-        const clone = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type);
-        clone.position.copy(selecionado.position); clone.position.x += 0.3;
-        scene.add(clone); vehicles.push(clone); selecionado = clone;
+        const c = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type);
+        c.position.copy(selecionado.position); c.position.x += 0.3;
+        scene.add(c); vehicles.push(c); selecionado = c;
         window.updateDim(); checkCol(); saveState();
-    }
-
-    window.showEdit = () => {
-        if (!selecionado) return;
-        document.getElementById('edit-panel').style.display = 'block';
-        document.getElementById('iN').value = selecionado.userData.nome;
-        document.getElementById('iC').value = selecionado.userData.dim.w;
-        document.getElementById('iL').value = selecionado.userData.dim.d;
-        document.getElementById('iA').value = selecionado.userData.dim.h;
-    }
+    };
 
     window.saveEdit = () => {
         if (!selecionado) return;
         const n = document.getElementById('iN').value, w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value);
         const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type;
         scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1);
-        const novo = createObj(lay, n, w, h, d, type); novo.position.copy(pos); novo.rotation.copy(rot);
-        scene.add(novo); vehicles.push(novo); selecionado = novo;
+        const nv = createObj(lay, n, w, h, d, type); nv.position.copy(pos); nv.rotation.copy(rot);
+        scene.add(nv); vehicles.push(nv); selecionado = nv;
         window.updateDim(); checkCol(); saveState();
         document.getElementById('edit-panel').style.display = 'none';
-    }
+    };
 
-    // Interação
+    // Eventos de Mouse/Touch
     let dragging = false;
     const ray = new THREE.Raycaster(); const m = new THREE.Vector2();
     const pXZ = new THREE.Plane(new THREE.Vector3(0,1,0), 0); const pY = new THREE.Plane();
@@ -333,24 +337,21 @@
         else { if(ray.ray.intersectPlane(pXZ, pI)) { selecionado.position.x = pI.x + off.x; selecionado.position.z = pI.z + off.z; } }
         window.updateDim(); checkCol();
     }
-    function onUp() { if (dragging) { saveState(); autoSave(); } dragging = false; controls.enabled = true; }
+    function onUp() { if (dragging) saveState(); dragging = false; controls.enabled = true; }
 
     window.addEventListener('mousedown', onDown); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
     window.addEventListener('touchstart', onDown); window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onUp);
 
-    window.rotate = () => { if(selecionado) { selecionado.rotation.y += Math.PI/2; window.updateDim(); checkCol(); saveState(); autoSave(); } };
+    window.toggleLayer = (layer) => {
+        if (layer === 'Piso') vis1 = !vis1; else vis2 = !vis2;
+        document.getElementById(layer === 'Piso' ? 'f1' : 'f2').classList.toggle('active');
+        vehicles.forEach(v => { if(v.userData.layer === layer) v.visible = (layer === 'Piso' ? vis1 : vis2); });
+        window.updateDim();
+    }
+    window.rotate = () => { if(selecionado) { selecionado.rotation.y += Math.PI/2; window.updateDim(); checkCol(); saveState(); } };
     window.toggleDim = () => { showDim = !showDim; window.updateDim(); };
     window.toggleMoveMode = () => { moveY = !moveY; document.getElementById('btnMode').innerHTML = moveY ? "↕️ 高さ調整モード" : "↔️ 水平移動モード"; document.getElementById('btnMode').classList.toggle('active'); };
-
-    let history = [], hIdx = -1;
-    function saveState() {
-        if (hIdx < history.length - 1) history = history.slice(0, hIdx + 1);
-        history.push(JSON.stringify(vehicles.map(t => ({ l: t.userData.layer, x: t.position.x, y: t.position.y, z: t.position.z, ry: t.rotation.y, d: t.userData.dim, n: t.userData.nome, t: t.userData.type }))));
-        hIdx++; updateHist();
-    }
-    window.undo = () => { if (hIdx > 0) { loadData(history[--hIdx]); updateHist(); } };
-    window.redo = () => { if (hIdx < history.length - 1) { loadData(history[++hIdx]); updateHist(); } };
-    function updateHist() { document.querySelectorAll('.btn-icon')[0].disabled = hIdx <= 0; document.querySelectorAll('.btn-icon')[1].disabled = hIdx >= history.length - 1; }
+    window.showEdit = () => { if (!selecionado) return; document.getElementById('edit-panel').style.display = 'block'; document.getElementById('iN').value = selecionado.userData.nome; document.getElementById('iC').value = selecionado.userData.dim.w; document.getElementById('iL').value = selecionado.userData.dim.d; document.getElementById('iA').value = selecionado.userData.dim.h; }
 
     function checkCol() {
         let e = false;
@@ -363,13 +364,14 @@
         document.getElementById('alert').style.display = e ? 'block' : 'none';
     }
 
-    // Restore Autosave on start
+    // Inicialização
     window.onload = () => {
+        saveState(); // Salva o estado vazio inicial
         const saved = localStorage.getItem('sim_autosave');
         if (saved && saved !== "[]") {
             if (confirm("前回のデータが見つかりました。復元しますか？")) {
                 loadData(saved);
-                history.push(saved); hIdx = 0; updateHist();
+                saveState();
             }
         }
     };
