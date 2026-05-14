@@ -367,7 +367,7 @@
     window.onload = () => {
         const saved = localStorage.getItem('sim_autosave');
         if (saved && saved !== "[]") {
-            if (confirm("前回のデータが見つかりました。復元しますか？\n(Dados anteriores encontrados. Restaurar?)")) {
+            if (confirm("前回のデータが見つかりました。復元しますか？")) {
                 loadData(saved);
                 history.push(saved); hIdx = 0; updateHist();
             }
