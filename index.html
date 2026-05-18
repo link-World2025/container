@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>コンテナ輸出シミュレーター</title>
+    <title>コンテナ輸出シミュレーター v9.3</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -14,7 +14,6 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 0; box-sizing: border-box; }
         
-        /* Painel Lateral */
         .panel { 
             pointer-events: auto; background: var(--panel); backdrop-filter: blur(10px); 
             border-right: 1px solid rgba(255,255,255,0.1); border-radius: 0 12px 12px 0; 
@@ -24,23 +23,16 @@
         }
         .panel.minimized { transform: translateX(-260px); }
 
-        /* Aba lateral (Handle) */
         .panel-handle {
             position: absolute; right: -50px; top: 10px; width: 50px;
             display: flex; flex-direction: column; gap: 6px; pointer-events: auto;
         }
-
         .handle-btn {
             background: #334155; border: 1px solid rgba(255,255,255,0.1); color: white;
             width: 48px; height: 48px; border-radius: 0 10px 10px 0; cursor: pointer;
             display: flex; align-items: center; justify-content: center; font-size: 20px;
         }
-        /* Correção do texto do botão menu */
-        .handle-btn.toggle { 
-            background: var(--primary); height: 70px; font-size: 11px; 
-            font-weight: bold; line-height: 1.2; text-align: center;
-            padding: 5px; box-sizing: border-box;
-        }
+        .handle-btn.toggle { background: var(--primary); height: 70px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center; padding: 5px; box-sizing: border-box; }
         .handle-btn:disabled { opacity: 0.2; }
 
         .panel-content { width: 100%; height: 100%; overflow-y: auto; padding-right: 5px; }
@@ -49,39 +41,42 @@
         .filter-btn { flex: 1; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; }
         .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.1); }
 
-        #edit-panel { display: none; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--primary); }
+        #edit-panel { display: none; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--accent); box-shadow: 0 0 10px rgba(16,185,129,0.2); }
         .inp-g { margin-bottom: 8px; }
         .inp-g label { display: block; font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
         .inp-g input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 4px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; }
 
-        /* Controles Inferiores */
-        .controls-bottom { position: absolute; bottom: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: flex-end; }
+        .controls-bottom { position: absolute; bottom: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: flex-end; z-index: 90; }
         .btn-group { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
-        
-        button.main { 
-            background: var(--primary); color: white; border: none; padding: 12px 18px; 
-            border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s;
-        }
+        button.main { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
         button.main:active { transform: scale(0.95); }
+        
+        button.main.edit-active { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(16,185,129,0.5); }
 
-        /* --- UPGRADE PARA PC (DESKTOP) --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; pointer-events: auto; }
+        .modal-box { background: var(--panel); border: 1px solid var(--primary); border-radius: 12px; width: 90%; max-width: 420px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 12px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; color: var(--accent); font-weight: bold; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .modal-header button { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        .search-bar { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; color: white; font-size: 14px; outline: none; box-sizing: border-box; }
+        .search-bar:focus { border-color: var(--primary); }
+        .veh-list { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 5px; }
+        .veh-item { background: #1e293b; padding: 12px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; font-size: 13px; display: flex; justify-content: space-between; align-items: center; transition: all 0.1s; }
+        .veh-item:hover { background: #334155; }
+        .veh-item.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
+        .veh-item span { opacity: 0.6; font-size: 11px; }
+
         @media (min-width: 1024px) {
-            button.main { 
-                padding: 18px 30px; /* Botões bem maiores */
-                font-size: 15px; 
-                border-radius: 14px;
-            }
+            button.main { padding: 18px 30px; font-size: 15px; border-radius: 14px; }
             .btn-group { gap: 12px; }
             .panel { width: 300px; }
             .panel.minimized { transform: translateX(-300px); }
         }
-
-        /* --- AJUSTE MODO PAISAGEM MOBILE --- */
         @media (orientation: landscape) and (max-height: 500px) {
             .controls-bottom { flex-direction: row; bottom: 10px; }
             .btn-group { flex-direction: row; }
             button.main { padding: 8px 12px; font-size: 10px; }
+            .modal-box { max-height: 90vh; padding: 10px; }
+            .veh-list { max-height: 180px; }
         }
         
         .alert { background: var(--danger); color: white; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
@@ -99,52 +94,80 @@
         
         <div class="panel-content">
             <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:15px; letter-spacing: 1px;">CONTAINER PUZZLE</div>
-            
-            <div class="btn-row">
-                <button onclick="resetView()" style="background:var(--reset); font-size:11px;" class="btn-icon">🏠 視点リセット</button>
-            </div>
-
+            <div class="btn-row"><button onclick="resetView()" style="background:var(--reset); font-size:11px;" class="btn-icon">🏠 視点リセット</button></div>
             <div class="btn-row">
                 <button class="filter-btn" style="background: var(--save); color: white;" onclick="saveToFile()">💾 保存</button>
                 <button class="filter-btn" style="background: #4b5563; color: white;" onclick="document.getElementById('fileInput').click()">📂 読込</button>
                 <input type="file" id="fileInput" style="display:none" accept=".json" onchange="loadFromFile(event)">
             </div>
-
             <div class="btn-row" style="margin-top:12px;">
                 <button id="f1" class="filter-btn active" onclick="toggleLayer('Piso')">1階 表示</button>
                 <button id="f2" class="filter-btn active" onclick="toggleLayer('Topo')">2階 表示</button>
             </div>
-
-            <button id="btnMode" class="mode-toggle" style="width:100%; margin-top:8px; padding:12px; border-radius:8px; background:#1e293b; color:white; border:none; cursor:pointer; font-size:11px; font-weight:bold;" onclick="toggleMoveMode()">↔️ 水平移動モード</button>
             
             <button class="filter-btn" style="width:100%; margin-top:8px; color: #00e5ff; height:40px; font-size:11px;" onclick="toggleDim()">📏 車両寸法を表示</button>
 
+            <!-- Menu de Edição Sincronizado -->
             <div id="edit-panel">
-                <div class="inp-g"><label>名称 (型式など)</label><input type="text" id="iN"></div>
+                <div style="color:var(--accent); font-size:10px; margin-bottom:5px; text-align:center;">--- 選択中の車両を編集 ---</div>
+                <div class="inp-g"><label>名称 (型式など)</label><input type="text" id="iN" oninput="liveUpdateName()"></div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
                     <div class="inp-g"><label>全長</label><input type="number" id="iC"></div>
                     <div class="inp-g"><label>全幅</label><input type="number" id="iL"></div>
                     <div class="inp-g"><label>全高</label><input type="number" id="iA"></div>
                 </div>
-                <button class="main" style="width:100%; background:var(--accent); margin-top:10px;" onclick="saveEdit()">変更を保存</button>
-                <button class="main" style="width:100%; background:var(--danger); margin-top:8px; font-size:10px;" onclick="deleteSelected()">🗑️ 選択車両を削除</button>
+                <button class="main" style="width:100%; background:var(--accent); margin-top:10px;" onclick="saveEdit()">寸法を適用</button>
+                <button class="main" style="width:100%; background:var(--danger); margin-top:8px; font-size:10px;" onclick="deleteSelected()">🗑️ この車両を削除</button>
             </div>
+            
             <div id="alert" class="alert">⚠️ 接触または範囲外です</div>
         </div>
     </div>
 
     <div class="controls-bottom">
         <div class="btn-group">
-            <button class="main" style="background:var(--wood)" onclick="addWood()">+ 角材 (9x9)</button>
-            <button class="main" style="background:var(--accent)" onclick="addVehicle('Piso')">+ 下段追加</button>
-            <button class="main" style="background:var(--primary)" onclick="addVehicle('Topo')">+ 上段追加</button>
+            <button class="main" style="background:var(--wood)" onclick="openWoodModal()">+ 角材 (9x9)</button>
+            <button class="main" style="background:var(--accent)" onclick="openVehModal('Piso')">+ 下段追加</button>
+            <button class="main" style="background:var(--primary)" onclick="openVehModal('Topo')">+ 上段追加</button>
         </div>
         <div class="btn-group">
-            <button class="main" style="background:#475569" onclick="showEdit()">⚙️ 編集</button>
+            <button id="btnMode" class="main" style="background:#1e293b" onclick="toggleMoveMode()">↔️ 水平</button>
+            <button id="btnEditToggle" class="main" style="background:#475569" onclick="toggleEditPanel()">⚙️ 編集</button>
             <button class="main" style="background:#8b5cf6" onclick="toggleVertical()">📐 縦/横</button>
             <button class="main" style="background:#d97706" onclick="copyVehicle()">📋 コピー</button>
             <button class="main" style="background:#6366f1" onclick="rotate()">↻ 回転</button>
         </div>
+    </div>
+</div>
+
+<!-- MODAIS -->
+<div id="modalVehicle" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">車両を選択 <button onclick="closeModal('modalVehicle')">✕</button></div>
+        <input type="text" id="vehSearch" class="search-bar" placeholder="🔍 型式を検索 (例: KUBOTA)...">
+        <div id="vehList" class="veh-list"></div>
+    </div>
+</div>
+
+<div id="modalCustom" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">自由指定 (カスタム) <button onclick="closeModal('modalCustom')">✕</button></div>
+        <div class="inp-g"><label>名称</label><input type="text" id="cName" value="CUSTOM TRACTOR"></div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+            <div class="inp-g"><label>全長 (cm)</label><input type="number" id="cC" value="250"></div>
+            <div class="inp-g"><label>全幅 (cm)</label><input type="number" id="cL" value="120"></div>
+            <div class="inp-g"><label>全高 (cm)</label><input type="number" id="cA" value="140"></div>
+        </div>
+        <button class="main" style="width:100%; margin-top:10px;" onclick="addCustomVehicle()">車両を追加</button>
+    </div>
+</div>
+
+<div id="modalWood" class="modal-overlay">
+    <div class="modal-box" style="max-width: 300px;">
+        <div class="modal-header">角材を追加 <button onclick="closeModal('modalWood')">✕</button></div>
+        <div class="inp-g"><label>長さ (cm)</label><input type="number" id="wLen" value="200"></div>
+        <div style="font-size:10px; color:#94a3b8; text-align:center;">※ 縦横 9x9cm 固定</div>
+        <button class="main" style="width:100%; background:var(--wood); margin-top:10px;" onclick="addWoodObject()">角材を追加</button>
     </div>
 </div>
 
@@ -156,6 +179,18 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+    const dbTractors = [
+        { n: "KUBOTA L2201S", c: 246, l: 113, a: 135 },
+        { n: "YANMAR F16D", c: 230, l: 105, a: 130 },
+        { n: "ISEKI TU1700", c: 235, l: 110, a: 130 },
+        { n: "KUBOTA GL200", c: 270, l: 125, a: 145 },
+        { n: "KUBOTA B1400", c: 215, l: 105, a: 125 },
+        { n: "YANMAR Ke-4", c: 210, l: 100, a: 125 },
+        { n: "YANMAR AF22", c: 260, l: 115, a: 135 },
+        { n: "ISEKI TX1500", c: 200, l: 105, a: 120 },
+        { n: "MITSUBISHI MT160", c: 220, l: 105, a: 125 }
+    ];
+
     const C_C = 12.03, C_L = 2.35, C_A = 2.69;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
@@ -164,27 +199,12 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
-    
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    window.toggleMenu = () => {
-        const p = document.getElementById('mainPanel');
-        p.classList.toggle('minimized');
-        document.getElementById('tglBtn').innerHTML = p.classList.contains('minimized') ? "メニュー<br>開く" : "メニュー<br>閉じる";
-    };
-
-    window.resetView = () => {
-        camera.position.set(18, 12, 12);
-        controls.target.set(C_C / 2, 0, 0);
-        controls.update();
-    };
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    window.toggleMenu = () => { const p = document.getElementById('mainPanel'); p.classList.toggle('minimized'); document.getElementById('tglBtn').innerHTML = p.classList.contains('minimized') ? "メニュー<br>開く" : "メニュー<br>閉じる"; };
+    window.resetView = () => { camera.position.set(18, 12, 12); controls.target.set(C_C / 2, 0, 0); controls.update(); };
     resetView();
 
     scene.add(new THREE.AmbientLight(0xffffff, 1.2));
@@ -200,72 +220,152 @@
     const vehicles = [];
     const gDim = new THREE.Group(); scene.add(gDim);
     let showDim = false, moveY = false, vis1 = true, vis2 = true, selecionado = null;
+    let editMode = false;
 
-    function genLabel(txt, cor = '#10b981') {
+    function createDynamicLabel(txt, cor) {
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
-        can.width = 512; can.height = 128; ctx.fillStyle = cor; ctx.fillRect(0,0,512,128);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 75px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 256, 85);
-        return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(can), transparent: true });
+        ctx.font = 'bold 75px sans-serif';
+        const txtWidth = ctx.measureText(txt).width;
+        can.width = Math.max(512, txtWidth + 60); can.height = 128; 
+        ctx.fillStyle = cor; ctx.fillRect(0,0,can.width,128);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 75px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, can.width/2, 85);
+        return { mat: new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(can), transparent: true }), ratio: can.width/128 };
     }
 
     function addLine(p1, p2, txt, cor = 0xffffff) {
         const g = new THREE.Group();
-        const matLine = new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true });
-        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), matLine));
+        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true })));
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
-        can.width = 256; can.height = 128; ctx.fillStyle = (cor === 0x00e5ff) ? '#00e5ff' : '#ffb700'; 
-        ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
+        can.width = 256; can.height = 128; ctx.fillStyle = cor; ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can), depthTest: false, transparent: true }));
-        spr.position.copy(p1).lerp(p2, 0.5); 
-        if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.4; else spr.position.y += 0.25;
+        spr.position.copy(p1).lerp(p2, 0.5); if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.4; else spr.position.y += 0.25;
         spr.scale.set(1.3, 0.65, 1); g.add(spr); return g;
     }
 
     window.updateDim = () => {
         gDim.clear(); if (!showDim) return;
-        gDim.add(addLine(new THREE.Vector3(0,-1.2, C_L/2+1.0), new THREE.Vector3(C_C,-1.2, C_L/2+1.0), "12.03m", 0x00e5ff));
-        gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), "2.69m", 0x00e5ff));
+        gDim.add(addLine(new THREE.Vector3(0,-1.2, C_L/2+1.0), new THREE.Vector3(C_C,-1.2, C_L/2+1.0), "12.03m", '#00e5ff'));
+        gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), "2.69m", '#00e5ff'));
         vehicles.forEach(v => {
             if (!v.visible || v.userData.type === "wood") return;
-            const {w, h, d} = v.userData.dim; const p = v.position;
-            const mw = w/100, mh = h/100, md = d/100;
-            gDim.add(addLine(new THREE.Vector3(p.x-mw/2, p.y + mh + 0.15, p.z), new THREE.Vector3(p.x+mw/2, p.y + mh + 0.15, p.z), mw.toFixed(2)+"m", 0xffb700));
-            gDim.add(addLine(new THREE.Vector3(p.x-mw/2-0.15, p.y, p.z+md/2+0.15), new THREE.Vector3(p.x-mw/2-0.15, p.y + mh, p.z+md/2+0.15), mh.toFixed(2)+"m", 0xffb700));
-            gDim.add(addLine(new THREE.Vector3(p.x+mw/2+0.15, p.y, p.z-md/2), new THREE.Vector3(p.x+mw/2+0.15, p.y, p.z+md/2), md.toFixed(2)+"m", 0xffb700));
+            const {w, h, d} = v.userData.dim; const p = v.position; const mw = w/100, mh = h/100, md = d/100;
+            gDim.add(addLine(new THREE.Vector3(p.x-mw/2, p.y+mh+0.15, p.z), new THREE.Vector3(p.x+mw/2, p.y+mh+0.15, p.z), mw.toFixed(2)+"m", '#ffb700'));
+            gDim.add(addLine(new THREE.Vector3(p.x-mw/2-0.15, p.y, p.z+md/2+0.15), new THREE.Vector3(p.x-mw/2-0.15, p.y+mh, p.z+md/2+0.15), mh.toFixed(2)+"m", '#ffb700'));
+            gDim.add(addLine(new THREE.Vector3(p.x+mw/2+0.15, p.y, p.z-md/2), new THREE.Vector3(p.x+mw/2+0.15, p.y, p.z+md/2), md.toFixed(2)+"m", '#ffb700'));
         });
     }
 
     function createObj(layer, nome, w_cm, h_cm, d_cm, type="vehicle") {
-        const g = new THREE.Group();
-        const w = w_cm/100, h = h_cm/100, d = d_cm/100;
-        let cor = (layer === 'Piso') ? 0x10b981 : 0x3b82f6;
-        if (type === "wood") cor = 0xa16207;
-        const bodyGeo = new THREE.BoxGeometry(w, h, d);
-        bodyGeo.translate(0, h/2, 0); 
-        const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: cor }));
-        g.add(body);
-        const lMat = genLabel(nome, (type === "wood") ? '#a16207' : (layer === 'Piso' ? '#10b981' : '#3b82f6'));
-        const geoL = new THREE.PlaneGeometry(Math.max(w*0.5, 0.4), 0.25);
-        const addL = (rx, ry, px, py, pz) => { 
-            const l = new THREE.Mesh(geoL, lMat); l.rotation.set(rx, ry, 0); l.position.set(px, py, pz); g.add(l);
-        }
-        addL(-Math.PI/2, 0, 0, h + 0.01, 0);
-        addL(0, 0, 0, h/2, d/2 + 0.01);
-        addL(0, Math.PI, 0, h/2, -d/2 - 0.01);
-        g.userData = { layer, corOrig: cor, body, type, dim: { w: w_cm, h: h_cm, d: d_cm }, nome };
-        g.visible = (layer === 'Piso' ? vis1 : vis2);
-        return g;
+        const g = new THREE.Group(); const w = w_cm/100, h = h_cm/100, d = d_cm/100;
+        const cor = (type === "wood") ? 0xa16207 : (layer === 'Piso' ? 0x10b981 : 0x3b82f6);
+        const bodyGeo = new THREE.BoxGeometry(w, h, d); bodyGeo.translate(0, h/2, 0); 
+        const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: cor })); g.add(body);
+        
+        // --- CONTORNO NEON DE SELEÇÃO FIXO ---
+        const outlineGeo = new THREE.BoxGeometry(w + 0.02, h + 0.02, d + 0.02); outlineGeo.translate(0, h/2, 0);
+        const outline = new THREE.Mesh(outlineGeo, new THREE.MeshBasicMaterial({ color: 0x00f5ff, wireframe: true, transparent: true, opacity: 0.9, depthTest: false }));
+        outline.visible = false; g.add(outline);
+
+        const labelData = createDynamicLabel(nome, (type === "wood") ? '#a16207' : (layer === 'Piso' ? '#10b981' : '#3b82f6'));
+        const lblHeight = 0.25; const lblWidth = lblHeight * labelData.ratio;
+        const finalWidth = Math.min(lblWidth, Math.max(w*0.8, 0.4)); 
+        const geoL = new THREE.PlaneGeometry(finalWidth, lblHeight);
+        const addL = (rx, ry, px, py, pz) => { const l = new THREE.Mesh(geoL, labelData.mat); l.rotation.set(rx, ry, 0); l.position.set(px, py, pz); g.add(l); }
+        addL(-Math.PI/2, 0, 0, h + 0.01, 0); addL(0, 0, 0, h/2, d/2 + 0.01); addL(0, Math.PI, 0, h/2, -d/2 - 0.01);
+        
+        g.userData = { layer, corOrig: cor, body, outline, type, dim: { w: w_cm, h: h_cm, d: d_cm }, nome };
+        g.visible = (layer === 'Piso' ? vis1 : vis2); return g;
     }
 
-    // Ações
-    window.addVehicle = (l) => { const v = createObj(l, "車両 " + (vehicles.length + 1), 175, 118, 115); v.position.set(2, l === 'Topo' ? 1.2 : 0.01, 0); scene.add(v); vehicles.push(v); selecionado = v; window.updateDim(); checkCol(); saveState(); };
-    window.addWood = () => { const len = prompt("長さを入力(cm):", "200"); if (!len || isNaN(len)) return; const v = createObj("Piso", "角材", parseFloat(len), 9, 9, "wood"); v.position.set(2, 0.01, 0); scene.add(v); vehicles.push(v); selecionado = v; window.updateDim(); checkCol(); saveState(); };
+    // --- INTERRUPTOR DE DESTAQUE ---
+    function highlightSelected() {
+        vehicles.forEach(v => {
+            if (v === selecionado && v.visible) {
+                v.userData.outline.visible = true; // Liga o neon independente da colisão
+            } else {
+                v.userData.outline.visible = false;
+            }
+        });
+        syncEditPanel();
+    }
+
+    window.toggleEditPanel = () => {
+        editMode = !editMode; const panel = document.getElementById('edit-panel'); const btn = document.getElementById('btnEditToggle');
+        if(editMode) { panel.style.display = 'block'; btn.classList.add('edit-active'); const mainP = document.getElementById('mainPanel'); if (mainP.classList.contains('minimized')) toggleMenu(); syncEditPanel(); } 
+        else { panel.style.display = 'none'; btn.classList.remove('edit-active'); }
+    };
+
+    function syncEditPanel() {
+        if (!editMode || !selecionado) return;
+        document.getElementById('iN').value = selecionado.userData.nome;
+        document.getElementById('iC').value = selecionado.userData.dim.w;
+        document.getElementById('iL').value = selecionado.userData.dim.d;
+        document.getElementById('iA').value = selecionado.userData.dim.h;
+    }
+
+    // --- MODAIS ---
+    let targetL = 'Piso'; let selIdx = 0;
+    window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+    window.openVehModal = (layer) => { targetL = layer; document.getElementById('modalVehicle').style.display = 'flex'; document.getElementById('vehSearch').value = ''; renderList(''); document.getElementById('vehSearch').focus(); };
+
+    function renderList(query) {
+        const list = document.getElementById('vehList'); list.innerHTML = '';
+        const filt = dbTractors.filter(t => t.n.toLowerCase().includes(query.toLowerCase()));
+        if(selIdx >= filt.length + 1) selIdx = 0;
+
+        filt.forEach((t, i) => {
+            const d = document.createElement('div'); d.className = 'veh-item' + (i === selIdx ? ' selected' : '');
+            d.innerHTML = `<div>${t.n}</div> <span>${t.c} x ${t.l} x ${t.a} cm</span>`;
+            d.onclick = () => { closeModal('modalVehicle'); injectObj(t.n, t.c, t.a, t.l); };
+            list.appendChild(d);
+        });
+
+        const custIdx = filt.length; const cDiv = document.createElement('div');
+        cDiv.className = 'veh-item' + (custIdx === selIdx ? ' selected' : '');
+        cDiv.innerHTML = `<div style="color:var(--accent); font-weight:bold;">+ 自由指定 (カスタム)</div> <span>自由な寸法</span>`;
+        cDiv.onclick = () => { closeModal('modalVehicle'); document.getElementById('modalCustom').style.display = 'flex'; };
+        list.appendChild(cDiv);
+    }
+
+    document.getElementById('vehSearch').addEventListener('input', (e) => { selIdx = 0; renderList(e.target.value); });
+    document.getElementById('vehSearch').addEventListener('keydown', (e) => {
+        const items = document.querySelectorAll('.veh-item');
+        if (e.key === 'ArrowDown') { e.preventDefault(); selIdx = (selIdx + 1) % items.length; renderList(e.target.value); items[selIdx].scrollIntoView({block: 'nearest'}); } 
+        else if (e.key === 'ArrowUp') { e.preventDefault(); selIdx = (selIdx - 1 + items.length) % items.length; renderList(e.target.value); items[selIdx].scrollIntoView({block: 'nearest'}); } 
+        else if (e.key === 'Enter') { e.preventDefault(); items[selIdx].click(); }
+    });
+
+    window.addCustomVehicle = () => {
+        const n = document.getElementById('cName').value || "CUSTOM";
+        const c = parseFloat(document.getElementById('cC').value); const l = parseFloat(document.getElementById('cL').value); const a = parseFloat(document.getElementById('cA').value);
+        if (!c || !l || !a) return alert("寸法を正しく入力してください");
+        closeModal('modalCustom'); injectObj(n, c, a, l);
+    };
+
+    window.openWoodModal = () => { document.getElementById('modalWood').style.display = 'flex'; };
+    window.addWoodObject = () => {
+        const len = parseFloat(document.getElementById('wLen').value); if (!len) return; closeModal('modalWood');
+        const v = createObj("Piso", "角材", len, 9, 9, "wood"); v.position.set(2, 0.01, 0); scene.add(v); vehicles.push(v); selecionado = v;
+        window.updateDim(); checkCol(); saveState();
+    };
+
+    function injectObj(n, c, a, l) {
+        const v = createObj(targetL, n, c, a, l, "vehicle"); v.position.set(2, targetL === 'Topo' ? 1.2 : 0.01, 0); scene.add(v); vehicles.push(v); selecionado = v;
+        window.updateDim(); checkCol(); saveState();
+    }
+
+    window.toggleMoveMode = () => { moveY = !moveY; const btn = document.getElementById('btnMode'); btn.innerHTML = moveY ? "↕️ 高さ" : "↔️ 水平"; btn.style.background = moveY ? "#b45309" : "#1e293b"; };
     window.deleteSelected = () => { if (!selecionado) return; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); selecionado = null; document.getElementById('edit-panel').style.display = 'none'; window.updateDim(); checkCol(); saveState(); };
     window.copyVehicle = () => { if (!selecionado) return; const d = selecionado.userData; const c = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type); c.position.copy(selecionado.position); c.position.x += 0.4; scene.add(c); vehicles.push(c); selecionado = c; window.updateDim(); checkCol(); saveState(); };
     window.toggleVertical = () => { if (!selecionado) return; const d = selecionado.userData.dim; const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type, name = selecionado.userData.nome; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const n = createObj(lay, name, d.h, d.w, d.d, type); n.position.copy(pos); n.rotation.copy(rot); scene.add(n); vehicles.push(n); selecionado = n; window.updateDim(); checkCol(); saveState(); };
-    window.saveEdit = () => { if (!selecionado) return; const n = document.getElementById('iN').value, w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value); const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const nv = createObj(lay, n, w, h, d, type); nv.position.copy(pos); nv.rotation.copy(rot); scene.add(nv); vehicles.push(nv); selecionado = nv; window.updateDim(); checkCol(); saveState(); document.getElementById('edit-panel').style.display = 'none'; };
+    window.liveUpdateName = () => { if (!selecionado) return; selecionado.userData.nome = document.getElementById('iN').value; };
     
-    // Persistência
+    window.saveEdit = () => { 
+        if (!selecionado) return; const n = document.getElementById('iN').value, w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value); const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type; 
+        scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const nv = createObj(lay, n, w, h, d, type); nv.position.copy(pos); nv.rotation.copy(rot); scene.add(nv); vehicles.push(nv); selecionado = nv; 
+        window.updateDim(); checkCol(); saveState();
+    };
+    
     window.saveToFile = () => { const data = vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y })); const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Plan.json`; a.click(); };
     window.loadFromFile = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { loadData(ev.target.result); saveState(); }; reader.readAsText(file); };
     function loadData(jsonStr) { if (!jsonStr) return; try { const data = JSON.parse(jsonStr); vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; data.forEach(i => { const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t); obj.position.set(i.p.x, i.p.y, i.p.z); obj.rotation.y = i.r; scene.add(obj); vehicles.push(obj); }); window.updateDim(); checkCol(); } catch (err) {} }
@@ -282,9 +382,12 @@
             const b = new THREE.Box3().setFromObject(t.userData.body);
             let c = (b.min.x < -0.01 || b.max.x > C_C + 0.01 || b.min.z < -C_L/2 - 0.01 || b.max.z > C_L/2 + 0.01 || b.min.y < -0.01 || b.max.y > C_A + 0.01);
             vehicles.forEach(o => { if (t !== o && b.clone().expandByScalar(-0.005).intersectsBox(new THREE.Box3().setFromObject(o.userData.body))) c = true; });
-            t.userData.body.material.color.set(c ? 0xef4444 : t.userData.corOrig); if (c) e = true;
+            
+            // CORREÇÃO: Aplica a cor limpa direta sem emissive
+            t.userData.body.material.color.setHex(c ? 0xef4444 : t.userData.corOrig); if (c) e = true;
         });
         document.getElementById('alert').style.display = e ? 'block' : 'none';
+        highlightSelected(); // Atualiza a gaiola neon estável
     }
 
     let dragging = false;
@@ -293,31 +396,23 @@
     const pI = new THREE.Vector3(), off = new THREE.Vector3();
 
     function onDown(e) {
+        if(document.getElementById('modalVehicle').style.display === 'flex' || document.getElementById('modalCustom').style.display === 'flex' || document.getElementById('modalWood').style.display === 'flex') return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
-        m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1;
-        ray.setFromCamera(m, camera);
+        m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1; ray.setFromCamera(m, camera);
         const hits = ray.intersectObjects(vehicles.filter(v => v.visible), true);
         if (hits.length > 0) {
             controls.enabled = false; dragging = true;
             let t = hits[0].object; while(t.parent && !vehicles.includes(t)) t = t.parent;
             selecionado = t;
-            if (moveY) {
-                const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0;
-                pY.setFromNormalAndCoplanarPoint(dir.normalize(), selecionado.position);
-                if (ray.ray.intersectPlane(pY, pI)) off.copy(selecionado.position).sub(pI);
-            } else {
-                pXZ.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0), selecionado.position);
-                if (ray.ray.intersectPlane(pXZ, pI)) off.copy(selecionado.position).sub(pI);
-            }
-            vehicles.forEach(v => v.userData.body.material.emissive.set(0x000000));
-            selecionado.userData.body.material.emissive.set(0x1a1a1a);
+            if (moveY) { pY.setFromNormalAndCoplanarPoint(new THREE.Vector3().copy(camera.getWorldDirection(new THREE.Vector3())).setY(0).normalize(), selecionado.position); if (ray.ray.intersectPlane(pY, pI)) off.copy(selecionado.position).sub(pI); } 
+            else { pXZ.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0), selecionado.position); if (ray.ray.intersectPlane(pXZ, pI)) off.copy(selecionado.position).sub(pI); }
+            highlightSelected();
         }
     }
     function onMove(e) {
         if (!dragging || !selecionado) return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
-        m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1;
-        ray.setFromCamera(m, camera);
+        m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1; ray.setFromCamera(m, camera);
         if (moveY) { if(ray.ray.intersectPlane(pY, pI)) selecionado.position.y = pI.y + off.y; }
         else { if(ray.ray.intersectPlane(pXZ, pI)) { selecionado.position.x = pI.x + off.x; selecionado.position.z = pI.z + off.z; } }
         window.updateDim(); checkCol();
@@ -325,13 +420,10 @@
     function onUp() { if (dragging) saveState(); dragging = false; controls.enabled = true; }
 
     window.addEventListener('mousedown', onDown); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchstart', onDown); window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onUp);
-
+    window.addEventListener('touchstart', onDown, {passive: false}); window.addEventListener('touchmove', onMove, {passive: false}); window.addEventListener('touchend', onUp);
+    window.toggleLayer = (l) => { if(l==='Piso') vis1=!vis1; else vis2=!vis2; document.getElementById(l==='Piso'?'f1':'f2').classList.toggle('active'); vehicles.forEach(v=>{if(v.userData.layer===l)v.visible=(l==='Piso'?vis1:vis2)}); window.updateDim(); };
     window.rotate = () => { if(selecionado) { selecionado.rotation.y += Math.PI/2; window.updateDim(); checkCol(); saveState(); } };
     window.toggleDim = () => { showDim = !showDim; window.updateDim(); };
-    window.toggleMoveMode = () => { moveY = !moveY; document.getElementById('btnMode').innerHTML = moveY ? "↕️ 高さ調整モード" : "↔️ 水平移動モード"; document.getElementById('btnMode').classList.toggle('active'); };
-    window.showEdit = () => { if (!selecionado) return; document.getElementById('edit-panel').style.display = 'block'; document.getElementById('iN').value = selecionado.userData.nome; document.getElementById('iC').value = selecionado.userData.dim.w; document.getElementById('iL').value = selecionado.userData.dim.d; document.getElementById('iA').value = selecionado.userData.dim.h; }
-    window.toggleLayer = (l) => { if(l==='Piso') vis1=!vis1; else vis2=!vis2; document.getElementById(l==='Piso'?'f1':'f2').classList.toggle('active'); vehicles.forEach(v=>{if(v.userData.layer===l)v.visible=(l==='Piso'?vis1:vis2)}); window.updateDim(); };
 
     window.onload = () => { saveState(); const saved = localStorage.getItem('sim_autosave'); if (saved && saved !== "[]") { if (confirm("復元しますか？")) { loadData(saved); saveState(); } } };
     function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
