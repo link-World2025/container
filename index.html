@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>コンテナ積載シミュレーター</title>
+    <title>輸出積載シミュレーター v10.6</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -90,7 +90,7 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">LOADING SIMULATOR</div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">JAPAN EXPORT PRO</div>
             
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
             <div class="btn-row" style="margin-bottom: 15px;">
@@ -146,6 +146,7 @@
     </div>
 </div>
 
+<!-- MODAIS -->
 <div id="modalVehicle" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">車両を選択 <button onclick="closeModal('modalVehicle')">✕</button></div>
@@ -233,14 +234,11 @@
         light.position.set(C_C/2, C_A + 5, 0);
     }
 
-    // --- CORREÇÃO AQUI: Adicionado skipResetView flag para o histórico ---
     window.setContainer = (size, bypassSave = false, skipResetView = false) => {
         if (size === 20) { C_C = 5.90; C_A = 2.39; contType = 20; document.getElementById('btn20ft').classList.add('cont-active'); document.getElementById('btn40ft').classList.remove('cont-active'); } 
         else { C_C = 12.03; C_A = 2.69; contType = 40; document.getElementById('btn40ft').classList.add('cont-active'); document.getElementById('btn20ft').classList.remove('cont-active'); }
         drawContainer(); 
-        
-        if (!skipResetView) resetView(); // Só reseta se não for disparado pelo Undo/Redo
-        
+        if (!skipResetView) resetView(); 
         window.updateDim(); checkCol(); 
         if(!bypassSave) saveState();
     };
@@ -319,8 +317,13 @@
     };
 
     function syncEditPanel() {
-        if (!editMode || !selecionado) return;
-        document.getElementById('iN').value = selecionado.userData.nome;
+        const pName = document.getElementById('iN');
+        if (!editMode || !pName) return;
+        if (!selecionado) {
+            pName.value = ''; document.getElementById('iC').value = ''; document.getElementById('iL').value = ''; document.getElementById('iA').value = '';
+            return;
+        }
+        pName.value = selecionado.userData.nome;
         document.getElementById('iC').value = selecionado.userData.dim.w;
         document.getElementById('iL').value = selecionado.userData.dim.d;
         document.getElementById('iA').value = selecionado.userData.dim.h;
@@ -392,12 +395,11 @@
     window.saveToFile = () => { const data = { c: contType, v: vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y })) }; const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Plan_${contType}ft.json`; a.click(); };
     window.loadFromFile = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { loadData(ev.target.result); saveState(); resetView(); }; reader.readAsText(file); };
     
-    // CORREÇÃO AQUI: Passado skipResetView=true para o setContainer de forma interna
     function loadData(jsonStr) { 
         if (!jsonStr) return; 
         try { 
             const data = JSON.parse(jsonStr); const list = data.v ? data.v : data; 
-            if(data.c) window.setContainer(data.c, true, true); // bypassSave=true, skipResetView=true
+            if(data.c) window.setContainer(data.c, true, true); 
 
             vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; 
             list.forEach(i => { const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t); obj.position.set(i.p.x, i.p.y, i.p.z); obj.rotation.y = i.r; scene.add(obj); vehicles.push(obj); }); 
@@ -415,8 +417,13 @@
     window.redo = () => { if (hIdx < history.length - 1) { loadData(history[++hIdx]); updateHist(); } };
     function updateHist() { const u = hIdx <= 0; const r = hIdx >= history.length - 1; document.getElementById('hUndo').disabled = u; document.getElementById('hRedo').disabled = r; }
 
+    // --- CORREÇÃO CIRÚRGICA DE MATRIX AQUI ---
     function checkCol() {
         let e = false;
+        
+        // Força a atualização do mundo físico imediatamente para evitar o lag de frames do Undo/Redo
+        scene.updateMatrixWorld(true); 
+
         vehicles.forEach(t => {
             const b = new THREE.Box3().setFromObject(t.userData.body);
             let c = (b.min.x < -0.01 || b.max.x > C_C + 0.01 || b.min.z < -C_L/2 - 0.01 || b.max.z > C_L/2 + 0.01 || b.min.y < -0.01 || b.max.y > C_A + 0.01);
@@ -430,15 +437,20 @@
 
     function onDown(e) {
         if(document.getElementById('modalVehicle').style.display === 'flex' || document.getElementById('modalCustom').style.display === 'flex' || document.getElementById('modalWood').style.display === 'flex') return;
+        if (e.target !== renderer.domElement) return;
+
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
         m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1; ray.setFromCamera(m, camera);
         const hits = ray.intersectObjects(vehicles.filter(v => v.visible), true);
+        
         if (hits.length > 0) {
             controls.enabled = false; dragging = true; let t = hits[0].object; while(t.parent && !vehicles.includes(t)) t = t.parent; selecionado = t;
             if (moveY) { pY.setFromNormalAndCoplanarPoint(new THREE.Vector3().copy(camera.getWorldDirection(new THREE.Vector3())).setY(0).normalize(), selecionado.position); if (ray.ray.intersectPlane(pY, pI)) off.copy(selecionado.position).sub(pI); } 
             else { pXZ.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0), selecionado.position); if (ray.ray.intersectPlane(pXZ, pI)) off.copy(selecionado.position).sub(pI); }
-            highlightSelected();
+        } else {
+            selecionado = null;
         }
+        highlightSelected();
     }
     function onMove(e) {
         if (!dragging || !selecionado) return;
