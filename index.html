@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>コンテナ輸出シミュレーター v9.3</title>
+    <title>コンテナ輸出積載シミュレーター β</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -14,32 +14,29 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 0; box-sizing: border-box; }
         
+        /* Painel Lateral */
         .panel { 
             pointer-events: auto; background: var(--panel); backdrop-filter: blur(10px); 
             border-right: 1px solid rgba(255,255,255,0.1); border-radius: 0 12px 12px 0; 
             padding: 15px; width: 260px; height: 100vh; position: absolute; left: 0; top: 0;
             box-shadow: 10px 0 32px rgba(0,0,0,0.5); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 100;
+            z-index: 100; box-sizing: border-box; touch-action: pan-y; 
         }
         .panel.minimized { transform: translateX(-260px); }
 
-        .panel-handle {
-            position: absolute; right: -50px; top: 10px; width: 50px;
-            display: flex; flex-direction: column; gap: 6px; pointer-events: auto;
-        }
-        .handle-btn {
-            background: #334155; border: 1px solid rgba(255,255,255,0.1); color: white;
-            width: 48px; height: 48px; border-radius: 0 10px 10px 0; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
-        }
+        .panel-handle { position: absolute; right: -50px; top: 10px; width: 50px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
+        .handle-btn { background: #334155; border: 1px solid rgba(255,255,255,0.1); color: white; width: 48px; height: 48px; border-radius: 0 10px 10px 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         .handle-btn.toggle { background: var(--primary); height: 70px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center; padding: 5px; box-sizing: border-box; }
         .handle-btn:disabled { opacity: 0.2; }
 
-        .panel-content { width: 100%; height: 100%; overflow-y: auto; padding-right: 5px; }
+        .panel-content { width: 100%; height: 100%; overflow-y: auto; padding-right: 5px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+        
         .btn-row { display: flex; gap: 5px; margin-bottom: 8px; }
         .btn-icon { flex: 1; background: #334155; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        .filter-btn { flex: 1; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        
+        .filter-btn { flex: 1; background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
         .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.1); }
+        .filter-btn.cont-active { border-color: #00e5ff; color: #00e5ff; background: rgba(0, 229, 255, 0.1); }
 
         #edit-panel { display: none; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--accent); box-shadow: 0 0 10px rgba(16,185,129,0.2); }
         .inp-g { margin-bottom: 8px; }
@@ -50,16 +47,16 @@
         .btn-group { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
         button.main { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
         button.main:active { transform: scale(0.95); }
-        
         button.main.edit-active { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(16,185,129,0.5); }
 
+        /* MODAIS */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; pointer-events: auto; }
         .modal-box { background: var(--panel); border: 1px solid var(--primary); border-radius: 12px; width: 90%; max-width: 420px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 12px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; color: var(--accent); font-weight: bold; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
         .modal-header button { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
         .search-bar { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; color: white; font-size: 14px; outline: none; box-sizing: border-box; }
         .search-bar:focus { border-color: var(--primary); }
-        .veh-list { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 5px; }
+        .veh-list { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 5px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
         .veh-item { background: #1e293b; padding: 12px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; font-size: 13px; display: flex; justify-content: space-between; align-items: center; transition: all 0.1s; }
         .veh-item:hover { background: #334155; }
         .veh-item.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
@@ -73,10 +70,10 @@
         }
         @media (orientation: landscape) and (max-height: 500px) {
             .controls-bottom { flex-direction: row; bottom: 10px; }
-            .btn-group { flex-direction: row; }
+            .btn-group { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; }
             button.main { padding: 8px 12px; font-size: 10px; }
-            .modal-box { max-height: 90vh; padding: 10px; }
-            .veh-list { max-height: 180px; }
+            .modal-box { max-height: 90vh; padding: 10px; overflow-y: auto; touch-action: pan-y; }
+            .veh-list { max-height: 140px; }
         }
         
         .alert { background: var(--danger); color: white; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
@@ -93,8 +90,19 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:15px; letter-spacing: 1px;">CONTAINER PUZZLE</div>
-            <div class="btn-row"><button onclick="resetView()" style="background:var(--reset); font-size:11px;" class="btn-icon">🏠 視点リセット</button></div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">LOADING CALCULATOR</div>
+            
+            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
+            <div class="btn-row" style="margin-bottom: 15px;">
+                <button id="btn20ft" class="filter-btn" onclick="setContainer(20)">20ft<br><span style="font-size:8px; font-weight:normal;">5.9 x 2.39</span></button>
+                <button id="btn40ft" class="filter-btn cont-active" onclick="setContainer(40)">40ft HC<br><span style="font-size:8px; font-weight:normal;">12.0 x 2.69</span></button>
+            </div>
+
+            <!-- INVERSÃO DE BOTÕES AQUI -->
+            <div class="btn-row">
+                <button onclick="clearAll()" style="background:var(--danger); font-size:11px;" class="btn-icon">🗑️ 全クリア</button>
+                <button onclick="resetView()" style="background:var(--reset); font-size:11px;" class="btn-icon">🏠 視点リセット</button>
+            </div>
             <div class="btn-row">
                 <button class="filter-btn" style="background: var(--save); color: white;" onclick="saveToFile()">💾 保存</button>
                 <button class="filter-btn" style="background: #4b5563; color: white;" onclick="document.getElementById('fileInput').click()">📂 読込</button>
@@ -107,10 +115,9 @@
             
             <button class="filter-btn" style="width:100%; margin-top:8px; color: #00e5ff; height:40px; font-size:11px;" onclick="toggleDim()">📏 車両寸法を表示</button>
 
-            <!-- Menu de Edição Sincronizado -->
             <div id="edit-panel">
                 <div style="color:var(--accent); font-size:10px; margin-bottom:5px; text-align:center;">--- 選択中の車両を編集 ---</div>
-                <div class="inp-g"><label>名称 (型式など)</label><input type="text" id="iN" oninput="liveUpdateName()"></div>
+                <div class="inp-g"><label>名称</label><input type="text" id="iN" oninput="liveUpdateName()"></div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
                     <div class="inp-g"><label>全長</label><input type="number" id="iC"></div>
                     <div class="inp-g"><label>全幅</label><input type="number" id="iL"></div>
@@ -191,7 +198,9 @@
         { n: "MITSUBISHI MT160", c: 220, l: 105, a: 125 }
     ];
 
-    const C_C = 12.03, C_L = 2.35, C_A = 2.69;
+    let C_C = 12.03, C_L = 2.35, C_A = 2.69; 
+    let contType = 40;
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0f172a);
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -204,28 +213,48 @@
 
     window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     window.toggleMenu = () => { const p = document.getElementById('mainPanel'); p.classList.toggle('minimized'); document.getElementById('tglBtn').innerHTML = p.classList.contains('minimized') ? "メニュー<br>開く" : "メニュー<br>閉じる"; };
-    window.resetView = () => { camera.position.set(18, 12, 12); controls.target.set(C_C / 2, 0, 0); controls.update(); };
-    resetView();
+    
+    window.resetView = () => { 
+        camera.position.set(contType === 40 ? 18 : 12, 12, 12); 
+        controls.target.set(C_C / 2, 0, 0); 
+        controls.update(); 
+    };
 
     scene.add(new THREE.AmbientLight(0xffffff, 1.2));
     const light = new THREE.PointLight(0xffffff, 150); light.position.set(6, 10, 6); scene.add(light);
 
+    const vigas = new THREE.Group(); scene.add(vigas);
     const beamMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
-    const addB = (w,h,d,x,y,z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), beamMat); m.position.set(x,y,z); scene.add(m); }
-    const bt = 0.08;
-    addB(bt, C_A, bt, 0, C_A/2, -C_L/2); addB(bt, C_A, bt, 0, C_A/2, C_L/2); addB(bt, C_A, bt, C_C, C_A/2, -C_L/2); addB(bt, C_A, bt, C_C, C_A/2, C_L/2);
-    addB(C_C, bt, bt, C_C/2, 0, -C_L/2); addB(C_C, bt, bt, C_C/2, 0, C_L/2); addB(C_C, bt, bt, C_C/2, C_A, -C_L/2); addB(C_C, bt, bt, C_C/2, C_A, C_L/2);
-    addB(bt, bt, C_L, 0, 0, 0); addB(bt, bt, C_L, C_C, 0, 0); addB(bt, bt, C_L, 0, C_A, 0); addB(bt, bt, C_L, C_C, C_A, 0);
 
-    const vehicles = [];
-    const gDim = new THREE.Group(); scene.add(gDim);
+    function drawContainer() {
+        vigas.clear(); const bt = 0.08;
+        const addB = (w,h,d,x,y,z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), beamMat); m.position.set(x,y,z); vigas.add(m); }
+        addB(bt, C_A, bt, 0, C_A/2, -C_L/2); addB(bt, C_A, bt, 0, C_A/2, C_L/2); addB(bt, C_A, bt, C_C, C_A/2, -C_L/2); addB(bt, C_A, bt, C_C, C_A/2, C_L/2);
+        addB(C_C, bt, bt, C_C/2, 0, -C_L/2); addB(C_C, bt, bt, C_C/2, 0, C_L/2); addB(C_C, bt, bt, C_C/2, C_A, -C_L/2); addB(C_C, bt, bt, C_C/2, C_A, C_L/2);
+        addB(bt, bt, C_L, 0, 0, 0); addB(bt, bt, C_L, C_C, 0, 0); addB(bt, bt, C_L, 0, C_A, 0); addB(bt, bt, C_L, C_C, C_A, 0);
+        light.position.set(C_C/2, C_A + 5, 0);
+    }
+
+    window.setContainer = (size) => {
+        if (size === 20) { C_C = 5.90; C_A = 2.39; contType = 20; document.getElementById('btn20ft').classList.add('cont-active'); document.getElementById('btn40ft').classList.remove('cont-active'); } 
+        else { C_C = 12.03; C_A = 2.69; contType = 40; document.getElementById('btn40ft').classList.add('cont-active'); document.getElementById('btn20ft').classList.remove('cont-active'); }
+        drawContainer(); resetView(); window.updateDim(); checkCol(); saveState();
+    };
+
+    drawContainer(); resetView();
+
+    window.clearAll = () => {
+        if(vehicles.length === 0) return;
+        if(confirm("すべて削除しますか？")) { vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; selecionado = null; document.getElementById('edit-panel').style.display = 'none'; window.updateDim(); saveState(); }
+    };
+
+    const vehicles = []; const gDim = new THREE.Group(); scene.add(gDim);
     let showDim = false, moveY = false, vis1 = true, vis2 = true, selecionado = null;
     let editMode = false;
 
     function createDynamicLabel(txt, cor) {
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
-        ctx.font = 'bold 75px sans-serif';
-        const txtWidth = ctx.measureText(txt).width;
+        ctx.font = 'bold 75px sans-serif'; const txtWidth = ctx.measureText(txt).width;
         can.width = Math.max(512, txtWidth + 60); can.height = 128; 
         ctx.fillStyle = cor; ctx.fillRect(0,0,can.width,128);
         ctx.fillStyle = '#fff'; ctx.font = 'bold 75px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, can.width/2, 85);
@@ -244,8 +273,9 @@
 
     window.updateDim = () => {
         gDim.clear(); if (!showDim) return;
-        gDim.add(addLine(new THREE.Vector3(0,-1.2, C_L/2+1.0), new THREE.Vector3(C_C,-1.2, C_L/2+1.0), "12.03m", '#00e5ff'));
-        gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), "2.69m", '#00e5ff'));
+        const lCor = contType === 40 ? '#00e5ff' : '#a855f7';
+        gDim.add(addLine(new THREE.Vector3(0,-1.2, C_L/2+1.0), new THREE.Vector3(C_C,-1.2, C_L/2+1.0), C_C.toFixed(2)+"m", lCor));
+        gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), C_A.toFixed(2)+"m", lCor));
         vehicles.forEach(v => {
             if (!v.visible || v.userData.type === "wood") return;
             const {w, h, d} = v.userData.dim; const p = v.position; const mw = w/100, mh = h/100, md = d/100;
@@ -261,7 +291,6 @@
         const bodyGeo = new THREE.BoxGeometry(w, h, d); bodyGeo.translate(0, h/2, 0); 
         const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: cor })); g.add(body);
         
-        // --- CONTORNO NEON DE SELEÇÃO FIXO ---
         const outlineGeo = new THREE.BoxGeometry(w + 0.02, h + 0.02, d + 0.02); outlineGeo.translate(0, h/2, 0);
         const outline = new THREE.Mesh(outlineGeo, new THREE.MeshBasicMaterial({ color: 0x00f5ff, wireframe: true, transparent: true, opacity: 0.9, depthTest: false }));
         outline.visible = false; g.add(outline);
@@ -277,17 +306,7 @@
         g.visible = (layer === 'Piso' ? vis1 : vis2); return g;
     }
 
-    // --- INTERRUPTOR DE DESTAQUE ---
-    function highlightSelected() {
-        vehicles.forEach(v => {
-            if (v === selecionado && v.visible) {
-                v.userData.outline.visible = true; // Liga o neon independente da colisão
-            } else {
-                v.userData.outline.visible = false;
-            }
-        });
-        syncEditPanel();
-    }
+    function highlightSelected() { vehicles.forEach(v => { v.userData.outline.visible = (v === selecionado && v.visible); }); syncEditPanel(); }
 
     window.toggleEditPanel = () => {
         editMode = !editMode; const panel = document.getElementById('edit-panel'); const btn = document.getElementById('btnEditToggle');
@@ -303,7 +322,7 @@
         document.getElementById('iA').value = selecionado.userData.dim.h;
     }
 
-    // --- MODAIS ---
+    // MODAIS
     let targetL = 'Piso'; let selIdx = 0;
     window.closeModal = (id) => document.getElementById(id).style.display = 'none';
     window.openVehModal = (layer) => { targetL = layer; document.getElementById('modalVehicle').style.display = 'flex'; document.getElementById('vehSearch').value = ''; renderList(''); document.getElementById('vehSearch').focus(); };
@@ -366,12 +385,25 @@
         window.updateDim(); checkCol(); saveState();
     };
     
-    window.saveToFile = () => { const data = vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y })); const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Plan.json`; a.click(); };
+    window.saveToFile = () => { const data = { c: contType, v: vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y })) }; const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Plan_${contType}ft.json`; a.click(); };
     window.loadFromFile = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { loadData(ev.target.result); saveState(); }; reader.readAsText(file); };
-    function loadData(jsonStr) { if (!jsonStr) return; try { const data = JSON.parse(jsonStr); vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; data.forEach(i => { const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t); obj.position.set(i.p.x, i.p.y, i.p.z); obj.rotation.y = i.r; scene.add(obj); vehicles.push(obj); }); window.updateDim(); checkCol(); } catch (err) {} }
+    
+    function loadData(jsonStr) { 
+        if (!jsonStr) return; 
+        try { 
+            const data = JSON.parse(jsonStr); const list = data.v ? data.v : data; if(data.c) window.setContainer(data.c);
+            vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; 
+            list.forEach(i => { const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t); obj.position.set(i.p.x, i.p.y, i.p.z); obj.rotation.y = i.r; scene.add(obj); vehicles.push(obj); }); 
+            window.updateDim(); checkCol(); 
+        } catch (err) {} 
+    }
 
     let history = [], hIdx = -1;
-    function saveState() { if (hIdx < history.length - 1) history = history.slice(0, hIdx + 1); const snap = JSON.stringify(vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y }))); history.push(snap); hIdx = history.length - 1; updateHist(); localStorage.setItem('sim_autosave', snap); }
+    function saveState() { 
+        if (hIdx < history.length - 1) history = history.slice(0, hIdx + 1); 
+        const snap = JSON.stringify({ c: contType, v: vehicles.map(v => ({ n: v.userData.nome, l: v.userData.layer, t: v.userData.type, d: v.userData.dim, p: v.position, r: v.rotation.y })) }); 
+        history.push(snap); hIdx = history.length - 1; updateHist();
+    }
     window.undo = () => { if (hIdx > 0) { loadData(history[--hIdx]); updateHist(); } };
     window.redo = () => { if (hIdx < history.length - 1) { loadData(history[++hIdx]); updateHist(); } };
     function updateHist() { const u = hIdx <= 0; const r = hIdx >= history.length - 1; document.getElementById('hUndo').disabled = u; document.getElementById('hRedo').disabled = r; }
@@ -382,18 +414,12 @@
             const b = new THREE.Box3().setFromObject(t.userData.body);
             let c = (b.min.x < -0.01 || b.max.x > C_C + 0.01 || b.min.z < -C_L/2 - 0.01 || b.max.z > C_L/2 + 0.01 || b.min.y < -0.01 || b.max.y > C_A + 0.01);
             vehicles.forEach(o => { if (t !== o && b.clone().expandByScalar(-0.005).intersectsBox(new THREE.Box3().setFromObject(o.userData.body))) c = true; });
-            
-            // CORREÇÃO: Aplica a cor limpa direta sem emissive
             t.userData.body.material.color.setHex(c ? 0xef4444 : t.userData.corOrig); if (c) e = true;
         });
-        document.getElementById('alert').style.display = e ? 'block' : 'none';
-        highlightSelected(); // Atualiza a gaiola neon estável
+        document.getElementById('alert').style.display = e ? 'block' : 'none'; highlightSelected();
     }
 
-    let dragging = false;
-    const ray = new THREE.Raycaster(); const m = new THREE.Vector2();
-    const pXZ = new THREE.Plane(new THREE.Vector3(0,1,0), 0); const pY = new THREE.Plane();
-    const pI = new THREE.Vector3(), off = new THREE.Vector3();
+    let dragging = false; const ray = new THREE.Raycaster(); const m = new THREE.Vector2(); const pXZ = new THREE.Plane(new THREE.Vector3(0,1,0), 0); const pY = new THREE.Plane(); const pI = new THREE.Vector3(), off = new THREE.Vector3();
 
     function onDown(e) {
         if(document.getElementById('modalVehicle').style.display === 'flex' || document.getElementById('modalCustom').style.display === 'flex' || document.getElementById('modalWood').style.display === 'flex') return;
@@ -401,9 +427,7 @@
         m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1; ray.setFromCamera(m, camera);
         const hits = ray.intersectObjects(vehicles.filter(v => v.visible), true);
         if (hits.length > 0) {
-            controls.enabled = false; dragging = true;
-            let t = hits[0].object; while(t.parent && !vehicles.includes(t)) t = t.parent;
-            selecionado = t;
+            controls.enabled = false; dragging = true; let t = hits[0].object; while(t.parent && !vehicles.includes(t)) t = t.parent; selecionado = t;
             if (moveY) { pY.setFromNormalAndCoplanarPoint(new THREE.Vector3().copy(camera.getWorldDirection(new THREE.Vector3())).setY(0).normalize(), selecionado.position); if (ray.ray.intersectPlane(pY, pI)) off.copy(selecionado.position).sub(pI); } 
             else { pXZ.setFromNormalAndCoplanarPoint(new THREE.Vector3(0,1,0), selecionado.position); if (ray.ray.intersectPlane(pXZ, pI)) off.copy(selecionado.position).sub(pI); }
             highlightSelected();
@@ -425,7 +449,15 @@
     window.rotate = () => { if(selecionado) { selecionado.rotation.y += Math.PI/2; window.updateDim(); checkCol(); saveState(); } };
     window.toggleDim = () => { showDim = !showDim; window.updateDim(); };
 
-    window.onload = () => { saveState(); const saved = localStorage.getItem('sim_autosave'); if (saved && saved !== "[]") { if (confirm("復元しますか？")) { loadData(saved); saveState(); } } };
+    // ALERTA DE SEGURANÇA CONTRA FECHAMENTO ACIDENTAL
+    window.addEventListener('beforeunload', (e) => {
+        if (vehicles.length > 0) {
+            e.preventDefault();
+            e.returnValue = ''; // Ativa o aviso padrão do navegador
+        }
+    });
+
+    window.onload = () => { saveState(); };
     function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
     animate();
 </script>
