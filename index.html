@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>コンテナ積載シミュレーター v10.6</title>
+    <title>輸出積載シミュレーター v11.2</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -43,11 +43,16 @@
         .inp-g label { display: block; font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
         .inp-g input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 4px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; }
 
+        /* Controles Inferiores */
         .controls-bottom { position: absolute; bottom: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: flex-end; z-index: 90; }
         .btn-group { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
         button.main { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
         button.main:active { transform: scale(0.95); }
         button.main.edit-active { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(16,185,129,0.5); }
+
+        /* BOTÕES FLUTUANTES SUPERIOR DIREITO */
+        .floating-top-right { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; pointer-events: auto; z-index: 1000; }
+        .float-btn { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(5px); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 14px; font-size: 11px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 
         /* MODAIS */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; pointer-events: auto; }
@@ -70,7 +75,7 @@
         }
         @media (orientation: landscape) and (max-height: 500px) {
             .controls-bottom { flex-direction: row; bottom: 10px; }
-            .btn-group { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; }
+            .btn-group { flex-direction: row; }
             button.main { padding: 8px 12px; font-size: 10px; }
             .modal-box { max-height: 90vh; padding: 10px; overflow-y: auto; touch-action: pan-y; }
             .veh-list { max-height: 140px; }
@@ -81,6 +86,12 @@
 </head>
 <body>
 
+<!-- BOTÕES FLUTUANTES -->
+<div class="floating-top-right">
+    <button class="float-btn" onclick="toggleFullscreen()">📱 全画面</button>
+    <button id="btnHideUI" class="float-btn" onclick="toggleUI()">👁️ UI非表示</button>
+</div>
+
 <div id="ui-layer">
     <div id="mainPanel" class="panel">
         <div class="panel-handle">
@@ -90,7 +101,7 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">LOADING SIMULATOR</div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">JAPAN EXPORT PRO</div>
             
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
             <div class="btn-row" style="margin-bottom: 15px;">
@@ -137,6 +148,7 @@
             <button class="main" style="background:var(--primary)" onclick="openVehModal('Topo')">+ 上段追加</button>
         </div>
         <div class="btn-group">
+            <button id="btnSnap" class="main edit-active" onclick="toggleSnap()">🧲 スナップ</button>
             <button id="btnMode" class="main" style="background:#1e293b" onclick="toggleMoveMode()">↔️ 水平</button>
             <button id="btnEditToggle" class="main" style="background:#475569" onclick="toggleEditPanel()">⚙️ 編集</button>
             <button class="main" style="background:#8b5cf6" onclick="toggleVertical()">📐 縦/横</button>
@@ -234,6 +246,14 @@
         light.position.set(C_C/2, C_A + 5, 0);
     }
 
+    function getCurrentWorldDim(obj) {
+        let w = obj.userData.dim.w / 100;
+        let d = obj.userData.dim.d / 100;
+        let angleDeg = Math.round(obj.rotation.y * (180 / Math.PI)) % 180;
+        if (Math.abs(angleDeg) === 90 || Math.abs(angleDeg) === 270) { return { w: d, d: w }; }
+        return { w: w, d: d };
+    }
+
     window.setContainer = (size, bypassSave = false, skipResetView = false) => {
         if (size === 20) { C_C = 5.90; C_A = 2.39; contType = 20; document.getElementById('btn20ft').classList.add('cont-active'); document.getElementById('btn40ft').classList.remove('cont-active'); } 
         else { C_C = 12.03; C_A = 2.69; contType = 40; document.getElementById('btn40ft').classList.add('cont-active'); document.getElementById('btn20ft').classList.remove('cont-active'); }
@@ -252,7 +272,7 @@
 
     const vehicles = []; const gDim = new THREE.Group(); scene.add(gDim);
     let showDim = false, moveY = false, vis1 = true, vis2 = true, selecionado = null;
-    let editMode = false;
+    let editMode = false, useSnap = true;
 
     function createDynamicLabel(txt, cor) {
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
@@ -266,7 +286,7 @@
     function addLine(p1, p2, txt, cor = 0xffffff) {
         const g = new THREE.Group();
         g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true })));
-        const can = document.createElement('canvas'); const ctx = can.getContext('2d');
+        const can = document.createElement('canvas'); const ctx = can.createElement ? can.getContext('2d') : can.getContext('2d');
         can.width = 256; can.height = 128; ctx.fillStyle = cor; ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can), depthTest: false, transparent: true }));
         spr.position.copy(p1).lerp(p2, 0.5); if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.4; else spr.position.y += 0.25;
@@ -280,7 +300,7 @@
         gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), C_A.toFixed(2)+"m", lCor));
         vehicles.forEach(v => {
             if (!v.visible || v.userData.type === "wood") return;
-            const {w, h, d} = v.userData.dim; const p = v.position; const mw = w/100, mh = h/100, md = d/100;
+            let rDim = getCurrentWorldDim(v); let mw = rDim.w; let md = rDim.d; let mh = v.userData.dim.h / 100; const p = v.position;
             gDim.add(addLine(new THREE.Vector3(p.x-mw/2, p.y+mh+0.15, p.z), new THREE.Vector3(p.x+mw/2, p.y+mh+0.15, p.z), mw.toFixed(2)+"m", '#ffb700'));
             gDim.add(addLine(new THREE.Vector3(p.x-mw/2-0.15, p.y, p.z+md/2+0.15), new THREE.Vector3(p.x-mw/2-0.15, p.y+mh, p.z+md/2+0.15), mh.toFixed(2)+"m", '#ffb700'));
             gDim.add(addLine(new THREE.Vector3(p.x+mw/2+0.15, p.y, p.z-md/2), new THREE.Vector3(p.x+mw/2+0.15, p.y, p.z+md/2), md.toFixed(2)+"m", '#ffb700'));
@@ -317,16 +337,9 @@
     };
 
     function syncEditPanel() {
-        const pName = document.getElementById('iN');
-        if (!editMode || !pName) return;
-        if (!selecionado) {
-            pName.value = ''; document.getElementById('iC').value = ''; document.getElementById('iL').value = ''; document.getElementById('iA').value = '';
-            return;
-        }
-        pName.value = selecionado.userData.nome;
-        document.getElementById('iC').value = selecionado.userData.dim.w;
-        document.getElementById('iL').value = selecionado.userData.dim.d;
-        document.getElementById('iA').value = selecionado.userData.dim.h;
+        const pName = document.getElementById('iN'); if (!editMode || !pName) return;
+        if (!selecionado) { pName.value = ''; document.getElementById('iC').value = ''; document.getElementById('iL').value = ''; document.getElementById('iA').value = ''; return; }
+        pName.value = selecionado.userData.nome; document.getElementById('iC').value = selecionado.userData.dim.w; document.getElementById('iL').value = selecionado.userData.dim.d; document.getElementById('iA').value = selecionado.userData.dim.h;
     }
 
     // MODAIS
@@ -336,21 +349,15 @@
 
     function renderList(query) {
         const list = document.getElementById('vehList'); list.innerHTML = '';
-        const filt = dbTractors.filter(t => t.n.toLowerCase().includes(query.toLowerCase()));
-        if(selIdx >= filt.length + 1) selIdx = 0;
-
+        const filt = dbTractors.filter(t => t.n.toLowerCase().includes(query.toLowerCase())); if(selIdx >= filt.length + 1) selIdx = 0;
         filt.forEach((t, i) => {
             const d = document.createElement('div'); d.className = 'veh-item' + (i === selIdx ? ' selected' : '');
             d.innerHTML = `<div>${t.n}</div> <span>${t.c} x ${t.l} x ${t.a} cm</span>`;
-            d.onclick = () => { closeModal('modalVehicle'); injectObj(t.n, t.c, t.a, t.l); };
-            list.appendChild(d);
+            d.onclick = () => { closeModal('modalVehicle'); injectObj(t.n, t.c, t.a, t.l); }; list.appendChild(d);
         });
-
-        const custIdx = filt.length; const cDiv = document.createElement('div');
-        cDiv.className = 'veh-item' + (custIdx === selIdx ? ' selected' : '');
+        const custIdx = filt.length; const cDiv = document.createElement('div'); cDiv.className = 'veh-item' + (custIdx === selIdx ? ' selected' : '');
         cDiv.innerHTML = `<div style="color:var(--accent); font-weight:bold;">+ 自由指定 (カスタム)</div> <span>自由な寸法</span>`;
-        cDiv.onclick = () => { closeModal('modalVehicle'); document.getElementById('modalCustom').style.display = 'flex'; };
-        list.appendChild(cDiv);
+        cDiv.onclick = () => { closeModal('modalVehicle'); document.getElementById('modalCustom').style.display = 'flex'; }; list.appendChild(cDiv);
     }
 
     document.getElementById('vehSearch').addEventListener('input', (e) => { selIdx = 0; renderList(e.target.value); });
@@ -362,10 +369,8 @@
     });
 
     window.addCustomVehicle = () => {
-        const n = document.getElementById('cName').value || "CUSTOM";
-        const c = parseFloat(document.getElementById('cC').value); const l = parseFloat(document.getElementById('cL').value); const a = parseFloat(document.getElementById('cA').value);
-        if (!c || !l || !a) return alert("寸法を正しく入力してください");
-        closeModal('modalCustom'); injectObj(n, c, a, l);
+        const n = document.getElementById('cName').value || "CUSTOM"; const c = parseFloat(document.getElementById('cC').value); const l = parseFloat(document.getElementById('cL').value); const a = parseFloat(document.getElementById('cA').value);
+        if (!c || !l || !a) return alert("寸法を正しく入力してください"); closeModal('modalCustom'); injectObj(n, c, a, l);
     };
 
     window.openWoodModal = () => { document.getElementById('modalWood').style.display = 'flex'; };
@@ -380,6 +385,9 @@
         window.updateDim(); checkCol(); saveState();
     }
 
+    window.toggleSnap = () => { useSnap = !useSnap; const btn = document.getElementById('btnSnap'); if(useSnap) { btn.classList.add('edit-active'); btn.style.background = "var(--accent)"; } else { btn.classList.remove('edit-active'); btn.style.background = "#334155"; } };
+    window.toggleFullscreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => alert("全画面表示エラー: " + err.message)); } else { document.exitFullscreen(); } };
+    window.toggleUI = () => { const panel = document.getElementById('mainPanel'); const bottom = document.querySelector('.controls-bottom'); const btn = document.getElementById('btnHideUI'); if(panel.style.display === 'none') { panel.style.display = 'block'; bottom.style.display = 'flex'; btn.innerHTML = "👁️ UI非表示"; btn.style.background = "rgba(30, 41, 59, 0.9)"; } else { panel.style.display = 'none'; bottom.style.display = 'none'; btn.innerHTML = "👁️ UI表示"; btn.style.background = "var(--accent)"; } };
     window.toggleMoveMode = () => { moveY = !moveY; const btn = document.getElementById('btnMode'); btn.innerHTML = moveY ? "↕️ 高さ" : "↔️ 水平"; btn.style.background = moveY ? "#b45309" : "#1e293b"; };
     window.deleteSelected = () => { if (!selecionado) return; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); selecionado = null; document.getElementById('edit-panel').style.display = 'none'; window.updateDim(); checkCol(); saveState(); };
     window.copyVehicle = () => { if (!selecionado) return; const d = selecionado.userData; const c = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type); c.position.copy(selecionado.position); c.position.x += 0.4; scene.add(c); vehicles.push(c); selecionado = c; window.updateDim(); checkCol(); saveState(); };
@@ -397,14 +405,7 @@
     
     function loadData(jsonStr) { 
         if (!jsonStr) return; 
-        try { 
-            const data = JSON.parse(jsonStr); const list = data.v ? data.v : data; 
-            if(data.c) window.setContainer(data.c, true, true); 
-
-            vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; 
-            list.forEach(i => { const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t); obj.position.set(i.p.x, i.p.y, i.p.z); obj.rotation.y = i.r; scene.add(obj); vehicles.push(obj); }); 
-            window.updateDim(); checkCol(); 
-        } catch (err) {} 
+        try { const data = JSON.parse(jsonStr); const list = data.v ? data.v : data; if(data.c) window.setContainer(data.c, true, true); vehicles.forEach(v => scene.remove(v)); vehicles.length = 0; list.forEach(i => { const obj = createObj(i.l, i.n, i.d.w, i.d.h, i.d.d, i.t); obj.position.set(i.p.x, i.p.y, i.p.z); obj.rotation.y = i.r; scene.add(obj); vehicles.push(obj); }); window.updateDim(); checkCol(); } catch (err) {} 
     }
 
     let history = [], hIdx = -1;
@@ -417,13 +418,8 @@
     window.redo = () => { if (hIdx < history.length - 1) { loadData(history[++hIdx]); updateHist(); } };
     function updateHist() { const u = hIdx <= 0; const r = hIdx >= history.length - 1; document.getElementById('hUndo').disabled = u; document.getElementById('hRedo').disabled = r; }
 
-    // --- CORREÇÃO CIRÚRGICA DE MATRIX AQUI ---
     function checkCol() {
-        let e = false;
-        
-        // Força a atualização do mundo físico imediatamente para evitar o lag de frames do Undo/Redo
-        scene.updateMatrixWorld(true); 
-
+        let e = false; scene.updateMatrixWorld(true); 
         vehicles.forEach(t => {
             const b = new THREE.Box3().setFromObject(t.userData.body);
             let c = (b.min.x < -0.01 || b.max.x > C_C + 0.01 || b.min.z < -C_L/2 - 0.01 || b.max.z > C_L/2 + 0.01 || b.min.y < -0.01 || b.max.y > C_A + 0.01);
@@ -452,14 +448,55 @@
         }
         highlightSelected();
     }
+
     function onMove(e) {
         if (!dragging || !selecionado) return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
         m.x = (x/window.innerWidth)*2-1; m.y = -(y/window.innerHeight)*2+1; ray.setFromCamera(m, camera);
+        
         if (moveY) { if(ray.ray.intersectPlane(pY, pI)) selecionado.position.y = pI.y + off.y; }
         else { if(ray.ray.intersectPlane(pXZ, pI)) { selecionado.position.x = pI.x + off.x; selecionado.position.z = pI.z + off.z; } }
+        
+        // --- LOGICA DE MAGNETISMO INTELIGENTE ATUALIZADA (SNAP V3) ---
+        if (useSnap) {
+            const snapT = 0.05; // AJUSTADO: Reduzido cirurgicamente para 5cm!
+            
+            let sDim = getCurrentWorldDim(selecionado);
+            let mw = sDim.w; let md = sDim.d;
+            
+            // --- CORREÇÃO: Puxada absoluta via Math.abs para permitir "forçar fora" ---
+            // Parede Esquerda (X = 0)
+            if (Math.abs((selecionado.position.x - mw/2) - 0) < snapT) selecionado.position.x = mw/2;
+            // Parede Direita (X = C_C)
+            if (Math.abs((selecionado.position.x + mw/2) - C_C) < snapT) selecionado.position.x = C_C - mw/2;
+            // Parede Traseira (Z = -C_L/2)
+            if (Math.abs((selecionado.position.z - md/2) - (-C_L/2)) < snapT) selecionado.position.z = -C_L/2 + md/2;
+            // Parede Frontal (Z = C_L/2)
+            if (Math.abs((selecionado.position.z + md/2) - C_L/2) < snapT) selecionado.position.z = C_L/2 - md/2;
+            
+            // Magnetismo entre os Tratores e as Madeiras (Cruzamento dinâmico)
+            vehicles.forEach(o => {
+                if (o === selecionado || !o.visible) return;
+                
+                let oDim = getCurrentWorldDim(o);
+                let ow = oDim.w; let od = oDim.d;
+                
+                // Colagem lateral relativa (Eixo X)
+                if (Math.abs(selecionado.position.z - o.position.z) < (md + od)/2 + 0.05) {
+                    if (Math.abs((selecionado.position.x - mw/2) - (o.position.x + ow/2)) < snapT) selecionado.position.x = o.position.x + ow/2 + mw/2;
+                    if (Math.abs((selecionado.position.x + mw/2) - (o.position.x - ow/2)) < snapT) selecionado.position.x = o.position.x - ow/2 - mw/2;
+                }
+                // Colagem de topo/fundo relativa (Eixo Z)
+                if (Math.abs(selecionado.position.x - o.position.x) < (mw + ow)/2 + 0.05) {
+                    if (Math.abs((selecionado.position.z - md/2) - (o.position.z + od/2)) < snapT) selecionado.position.z = o.position.z + od/2 + md/2;
+                    if (Math.abs((selecionado.position.z + md/2) - (o.position.z - od/2)) < snapT) selecionado.position.z = o.position.z - od/2 - md/2;
+                }
+            });
+        }
+
         window.updateDim(); checkCol();
     }
+    
     function onUp() { if (dragging) saveState(); dragging = false; controls.enabled = true; }
 
     window.addEventListener('mousedown', onDown); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
