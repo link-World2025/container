@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>輸出積載シミュレーター v11.6</title>
+    <title>輸出積載シミュレーター v11.7</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -14,6 +14,9 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 0; box-sizing: border-box; }
         
+        /* CLASSE DE INVISIBILIDADE ABSOLUTA (Bypassa qualquer !important) */
+        .ui-hidden { display: none !important; }
+
         /* Painel Lateral */
         .panel { 
             pointer-events: auto; background: var(--panel); backdrop-filter: blur(10px); 
@@ -71,7 +74,7 @@
         .veh-item.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
         .veh-item span { opacity: 0.6; font-size: 11px; }
 
-        /* --- FORÇANDO MODO PORTRAIT MOBILE (ERGO) --- */
+        /* --- CONFIGURAÇÃO SMARTPHONE EM PÉ (PORTRAIT) --- */
         @media (max-width: 1023px) {
             .panel-handle { top: auto !important; bottom: 110px !important; }
         }
@@ -84,7 +87,6 @@
             .panel { width: 300px; }
             .panel.minimized { transform: translateX(-300px); }
             
-            /* Restaura o menu no topo do PC */
             .panel-handle { top: 10px !important; bottom: auto !important; }
             .handle-btn.toggle { order: 1 !important; }
             #hUndo { order: 2 !important; }
@@ -93,14 +95,11 @@
         
         /* --- TRAVA DEFINITIVA PARA SMARTPHONE DEITADO (LANDSCAPE MOBILE) --- */
         @media (orientation: landscape) and (max-height: 600px) {
-            .panel-handle {
-                bottom: 105px !important; /* Totalmente livre da barra do navegador */
-                top: auto !important;
-            }
+            .panel-handle { bottom: 105px !important; top: auto !important; }
             .controls-bottom { 
                 display: flex !important;
                 flex-direction: row !important; 
-                bottom: 55px !important; /* Sobe 55px fixos para escapar de qualquer barra mobile */
+                bottom: 55px !important; 
                 right: 15px !important; 
                 gap: 6px !important;
                 pointer-events: none !important;
@@ -126,12 +125,13 @@
 </head>
 <body>
 
-<!-- BOTÕES FLUTUANTES -->
+<!-- BOTÕES FLUTUANTES (PERMANECEM SEMPRE ATIVOS) -->
 <div class="floating-top-right">
     <button class="float-btn" onclick="toggleFullscreen()">📱 全画面</button>
     <button id="btnHideUI" class="float-btn" onclick="toggleUI()">👁️ UI非表示</button>
 </div>
 
+<!-- CONTAINER DE INTERFACE (CHAVEADO DIRETAMENTE VIA JAVASCRIPT) -->
 <div id="ui-layer">
     <div id="mainPanel" class="panel">
         <div class="panel-handle">
@@ -427,7 +427,20 @@
 
     window.toggleSnap = () => { useSnap = !useSnap; const btn = document.getElementById('btnSnap'); if(useSnap) { btn.classList.add('edit-active'); btn.style.background = "var(--accent)"; } else { btn.classList.remove('edit-active'); btn.style.background = "#334155"; } };
     window.toggleFullscreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => alert("全画面表示エラー: " + err.message)); } else { document.exitFullscreen(); } };
-    window.toggleUI = () => { const panel = document.getElementById('mainPanel'); const bottom = document.querySelector('.controls-bottom'); const btn = document.getElementById('btnHideUI'); if(panel.style.display === 'none') { panel.style.display = 'block'; bottom.style.display = 'flex'; btn.innerHTML = "👁️ UI非表示"; btn.style.background = "rgba(30, 41, 59, 0.9)"; } else { panel.style.display = 'none'; bottom.style.display = 'none'; btn.innerHTML = "👁️ UI表示"; btn.style.background = "var(--accent)"; } };
+    
+    // --- CORREÇÃO CIRÚRGICA: Chaveia a classe oculta no pai direto de todas as interfaces ---
+    window.toggleUI = () => {
+        const uiLayer = document.getElementById('ui-layer');
+        const btn = document.getElementById('btnHideUI');
+        if(uiLayer.classList.contains('ui-hidden')) {
+            uiLayer.classList.remove('ui-hidden');
+            btn.innerHTML = "👁️ UI非表示"; btn.style.background = "rgba(30, 41, 59, 0.9)";
+        } else {
+            uiLayer.classList.add('ui-hidden');
+            btn.innerHTML = "👁️ UI表示"; btn.style.background = "var(--accent)";
+        }
+    };
+
     window.toggleMoveMode = () => { moveY = !moveY; const btn = document.getElementById('btnMode'); btn.innerHTML = moveY ? "↕️ 高さ" : "↔️ 水平"; btn.style.background = moveY ? "#b45309" : "#1e293b"; };
     window.deleteSelected = () => { if (!selecionado) return; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); selecionado = null; document.getElementById('edit-panel').style.display = 'none'; window.updateDim(); checkCol(); saveState(); };
     window.copyVehicle = () => { if (!selecionado) return; const d = selecionado.userData; const c = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type); c.position.copy(selecionado.position); c.position.x += 0.4; scene.add(c); vehicles.push(c); selecionado = c; window.updateDim(); checkCol(); saveState(); };
