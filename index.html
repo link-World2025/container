@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>コンテナ積載シミュレーター β</title>
+    <title>コンテナ積載シミュレーター</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -26,7 +26,11 @@
 
         .panel-handle { position: absolute; right: -50px; top: 10px; width: 50px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
         .handle-btn { background: #334155; border: 1px solid rgba(255,255,255,0.1); color: white; width: 48px; height: 48px; border-radius: 0 10px 10px 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .handle-btn.toggle { background: var(--primary); height: 70px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center; padding: 5px; box-sizing: border-box; }
+        
+        /* ORDEM NO SMARTPHONE (Menu embaixo, Undo/Redo em cima) */
+        .handle-btn.toggle { background: var(--primary); height: 70px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center; padding: 5px; box-sizing: border-box; order: 3; }
+        #hUndo { order: 1; }
+        #hRedo { order: 2; }
         .handle-btn:disabled { opacity: 0.2; }
 
         .panel-content { width: 100%; height: 100%; overflow-y: auto; padding-right: 5px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
@@ -43,7 +47,7 @@
         .inp-g label { display: block; font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
         .inp-g input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 4px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; }
 
-        /* Controles Inferiores */
+        /* Controles Inferiores (Padrão Vertical) */
         .controls-bottom { position: absolute; bottom: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: flex-end; z-index: 90; }
         .btn-group { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
         button.main { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
@@ -67,18 +71,26 @@
         .veh-item.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
         .veh-item span { opacity: 0.6; font-size: 11px; }
 
+        /* CONFIGURAÇÃO DO MODO DESKTOP (PC) */
         @media (min-width: 1024px) {
             button.main { padding: 18px 30px; font-size: 15px; border-radius: 14px; }
             .btn-group { gap: 12px; }
             .panel { width: 300px; }
             .panel.minimized { transform: translateX(-300px); }
+            
+            /* Inverte a ordem das abas no PC */
+            .handle-btn.toggle { order: 1; }
+            #hUndo { order: 2; }
+            #hRedo { order: 3; }
         }
-        @media (orientation: landscape) and (max-height: 500px) {
-            .controls-bottom { flex-direction: row; bottom: 10px; }
-            .btn-group { flex-direction: row; }
+        
+        /* CORREÇÃO MOBILE LANDSCAPE (TRAVADO PARA QUALQUER SMARTPHONE EM FULLSCREEN) */
+        @media (orientation: landscape) and (max-width: 1023px) {
+            .controls-bottom { flex-direction: row !important; bottom: 10px; right: 10px; gap: 8px; }
+            .btn-group { flex-direction: row !important; gap: 6px; }
             button.main { padding: 8px 12px; font-size: 10px; }
             .modal-box { max-height: 90vh; padding: 10px; overflow-y: auto; touch-action: pan-y; }
-            .veh-list { max-height: 140px; }
+            .veh-list { max-height: 110px; }
         }
         
         .alert { background: var(--danger); color: white; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
@@ -101,7 +113,7 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">LOADING SIMULATOR</div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">CONTAINER SIMULATOR</div>
             
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
             <div class="btn-row" style="margin-bottom: 15px;">
@@ -286,7 +298,7 @@
     function addLine(p1, p2, txt, cor = 0xffffff) {
         const g = new THREE.Group();
         g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true })));
-        const can = document.createElement('canvas'); const ctx = can.createElement ? can.getContext('2d') : can.getContext('2d');
+        const can = document.createElement('canvas'); const ctx = can.getContext('2d');
         can.width = 256; can.height = 128; ctx.fillStyle = cor; ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can), depthTest: false, transparent: true }));
         spr.position.copy(p1).lerp(p2, 0.5); if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.4; else spr.position.y += 0.25;
@@ -353,7 +365,7 @@
         filt.forEach((t, i) => {
             const d = document.createElement('div'); d.className = 'veh-item' + (i === selIdx ? ' selected' : '');
             d.innerHTML = `<div>${t.n}</div> <span>${t.c} x ${t.l} x ${t.a} cm</span>`;
-            d.onclick = () => { closeModal('modalVehicle'); injectObj(t.n, t.c, t.a, t.l); }; list.appendChild(d);
+            d.onclick = () => { closeModal('modalVehicle'); injectObj(t.n, t.c, t.a, l); }; list.appendChild(d);
         });
         const custIdx = filt.length; const cDiv = document.createElement('div'); cDiv.className = 'veh-item' + (custIdx === selIdx ? ' selected' : '');
         cDiv.innerHTML = `<div style="color:var(--accent); font-weight:bold;">+ 自由指定 (カスタム)</div> <span>自由な寸法</span>`;
@@ -457,36 +469,23 @@
         if (moveY) { if(ray.ray.intersectPlane(pY, pI)) selecionado.position.y = pI.y + off.y; }
         else { if(ray.ray.intersectPlane(pXZ, pI)) { selecionado.position.x = pI.x + off.x; selecionado.position.z = pI.z + off.z; } }
         
-        // --- LOGICA DE MAGNETISMO INTELIGENTE ATUALIZADA (SNAP V3) ---
         if (useSnap) {
-            const snapT = 0.05; // AJUSTADO: Reduzido cirurgicamente para 5cm!
+            const snapT = 0.05; 
+            let sDim = getCurrentWorldDim(selecionado); let mw = sDim.w; let md = sDim.d;
             
-            let sDim = getCurrentWorldDim(selecionado);
-            let mw = sDim.w; let md = sDim.d;
-            
-            // --- CORREÇÃO: Puxada absoluta via Math.abs para permitir "forçar fora" ---
-            // Parede Esquerda (X = 0)
             if (Math.abs((selecionado.position.x - mw/2) - 0) < snapT) selecionado.position.x = mw/2;
-            // Parede Direita (X = C_C)
             if (Math.abs((selecionado.position.x + mw/2) - C_C) < snapT) selecionado.position.x = C_C - mw/2;
-            // Parede Traseira (Z = -C_L/2)
             if (Math.abs((selecionado.position.z - md/2) - (-C_L/2)) < snapT) selecionado.position.z = -C_L/2 + md/2;
-            // Parede Frontal (Z = C_L/2)
             if (Math.abs((selecionado.position.z + md/2) - C_L/2) < snapT) selecionado.position.z = C_L/2 - md/2;
             
-            // Magnetismo entre os Tratores e as Madeiras (Cruzamento dinâmico)
             vehicles.forEach(o => {
                 if (o === selecionado || !o.visible) return;
+                let oDim = getCurrentWorldDim(o); let ow = oDim.w; let od = oDim.d;
                 
-                let oDim = getCurrentWorldDim(o);
-                let ow = oDim.w; let od = oDim.d;
-                
-                // Colagem lateral relativa (Eixo X)
                 if (Math.abs(selecionado.position.z - o.position.z) < (md + od)/2 + 0.05) {
                     if (Math.abs((selecionado.position.x - mw/2) - (o.position.x + ow/2)) < snapT) selecionado.position.x = o.position.x + ow/2 + mw/2;
                     if (Math.abs((selecionado.position.x + mw/2) - (o.position.x - ow/2)) < snapT) selecionado.position.x = o.position.x - ow/2 - mw/2;
                 }
-                // Colagem de topo/fundo relativa (Eixo Z)
                 if (Math.abs(selecionado.position.x - o.position.x) < (mw + ow)/2 + 0.05) {
                     if (Math.abs((selecionado.position.z - md/2) - (o.position.z + od/2)) < snapT) selecionado.position.z = o.position.z + od/2 + md/2;
                     if (Math.abs((selecionado.position.z + md/2) - (o.position.z - od/2)) < snapT) selecionado.position.z = o.position.z - od/2 - md/2;
