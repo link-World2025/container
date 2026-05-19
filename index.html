@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>輸出積載シミュレーター v11.5</title>
+    <title>輸出積載シミュレーター v11.6</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -24,10 +24,13 @@
         }
         .panel.minimized { transform: translateX(-260px); }
 
-        .panel-handle { position: absolute; right: -50px; width: 50px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
+        /* Padrão Mobile: Alinhamento na parte inferior, seguro contra barras do sistema */
+        .panel-handle { position: absolute; right: -50px; bottom: 110px; width: 50px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
         .handle-btn { background: #334155; border: 1px solid rgba(255,255,255,0.1); color: white; width: 48px; height: 48px; border-radius: 0 10px 10px 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         
-        .handle-btn.toggle { background: var(--primary); height: 70px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center; padding: 5px; box-sizing: border-box; }
+        .handle-btn.toggle { background: var(--primary); height: 70px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center; padding: 5px; box-sizing: border-box; order: 3; }
+        #hUndo { order: 1; }
+        #hRedo { order: 2; }
         .handle-btn:disabled { opacity: 0.2; }
 
         .panel-content { width: 100%; height: 100%; overflow-y: auto; padding-right: 5px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
@@ -44,7 +47,7 @@
         .inp-g label { display: block; font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
         .inp-g input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 4px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; }
 
-        /* Controles Inferiores (Padrão Vertical para Computador / Celular em pé) */
+        /* Controles Inferiores Padrão */
         .controls-bottom { position: absolute; bottom: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: flex-end; z-index: 90; }
         .btn-group { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
         button.main { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
@@ -68,18 +71,16 @@
         .veh-item.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
         .veh-item span { opacity: 0.6; font-size: 11px; }
 
-        /* --- CONFIGURAÇÃO SMARTPHONE GERAL (Garante o Menu de fechar embaixo) --- */
+        /* --- FORÇANDO MODO PORTRAIT MOBILE (ERGO) --- */
         @media (max-width: 1023px) {
-            .panel-handle { top: auto !important; bottom: 15px !important; }
-            .handle-btn.toggle { order: 3 !important; } /* Botão de fechar fica na base do bloco */
-            #hUndo { order: 1 !important; }
-            #hRedo { order: 2 !important; }
+            .panel-handle { top: auto !important; bottom: 110px !important; }
         }
 
-        /* CONFIGURAÇÃO DO MODO DESKTOP (PC) */
-        @media (min-width: 1024px) {
+        /* --- CONFIGURAÇÃO PARA PC (DESKTOP) --- */
+        @media (min-width: 1024px) and (min-height: 601px) {
             button.main { padding: 18px 30px; font-size: 15px; border-radius: 14px; }
-            .btn-group { gap: 12px; }
+            .btn-group { gap: 12px; flex-direction: column !important; }
+            .controls-bottom { flex-direction: column !important; bottom: 15px !important; right: 15px !important; }
             .panel { width: 300px; }
             .panel.minimized { transform: translateX(-300px); }
             
@@ -90,24 +91,29 @@
             #hRedo { order: 3 !important; }
         }
         
-        /* CORREÇÃO DEFINITIVA MOBILE LANDSCAPE (Deitado - Normal e Fullscreen) */
-        @media (orientation: landscape) and (max-width: 1023px) {
+        /* --- TRAVA DEFINITIVA PARA SMARTPHONE DEITADO (LANDSCAPE MOBILE) --- */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .panel-handle {
+                bottom: 105px !important; /* Totalmente livre da barra do navegador */
+                top: auto !important;
+            }
             .controls-bottom { 
+                display: flex !important;
                 flex-direction: row !important; 
-                bottom: 8px !important; 
-                right: 8px !important; 
+                bottom: 55px !important; /* Sobe 55px fixos para escapar de qualquer barra mobile */
+                right: 15px !important; 
                 gap: 6px !important;
-                flex-wrap: wrap !important;
-                justify-content: flex-end !important;
+                pointer-events: none !important;
                 max-width: calc(100vw - 70px) !important;
             }
             .btn-group { 
+                display: flex !important;
                 flex-direction: row !important; 
                 gap: 6px !important;
-                flex-wrap: wrap !important;
+                pointer-events: auto !important;
             }
             button.main { 
-                padding: 6px 10px !important; 
+                padding: 8px 12px !important; 
                 font-size: 10px !important; 
                 border-radius: 6px !important;
             }
