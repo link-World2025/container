@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>輸出積載シミュレーター v11.8</title>
+    <title>輸出積載シミュレーター v12.1</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -54,7 +54,6 @@
         button.main:active { transform: scale(0.95); }
         button.main.edit-active { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(16,185,129,0.5); }
 
-        /* BOTÕES FLUTUANTES SUPERIOR DIREITO */
         .floating-top-right { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; pointer-events: auto; z-index: 1000; }
         .float-btn { background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(5px); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 14px; font-size: 11px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 
@@ -81,7 +80,6 @@
             .controls-bottom { flex-direction: column !important; bottom: 15px !important; right: 15px !important; }
             .panel { width: 300px; }
             .panel.minimized { transform: translateX(-300px); }
-            
             .panel-handle { top: 10px !important; bottom: auto !important; }
             .handle-btn.toggle { order: 1 !important; }
             #hUndo { order: 2 !important; }
@@ -90,26 +88,9 @@
         
         @media (orientation: landscape) and (max-height: 600px) {
             .panel-handle { bottom: 105px !important; top: auto !important; }
-            .controls-bottom { 
-                display: flex !important;
-                flex-direction: row !important; 
-                bottom: 55px !important; 
-                right: 15px !important; 
-                gap: 6px !important;
-                pointer-events: none !important;
-                max-width: calc(100vw - 70px) !important;
-            }
-            .btn-group { 
-                display: flex !important;
-                flex-direction: row !important; 
-                gap: 6px !important;
-                pointer-events: auto !important;
-            }
-            button.main { 
-                padding: 8px 12px !important; 
-                font-size: 10px !important; 
-                border-radius: 6px !important;
-            }
+            .controls-bottom { display: flex !important; flex-direction: row !important; bottom: 55px !important; right: 15px !important; gap: 6px !important; pointer-events: none !important; max-width: calc(100vw - 70px) !important; }
+            .btn-group { display: flex !important; flex-direction: row !important; gap: 6px !important; pointer-events: auto !important; }
+            button.main { padding: 8px 12px !important; font-size: 10px !important; border-radius: 6px !important; }
             .modal-box { max-height: 90vh; padding: 10px; overflow-y: auto; touch-action: pan-y; }
             .veh-list { max-height: 110px; }
         }
@@ -119,7 +100,6 @@
 </head>
 <body>
 
-<!-- BOTÕES FLUTUANTES -->
 <div class="floating-top-right">
     <button class="float-btn" onclick="toggleFullscreen()">📱 全画面</button>
     <button id="btnHideUI" class="float-btn" onclick="toggleUI()">👁️ UI非表示</button>
@@ -134,12 +114,12 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">JAPAN EXPORT PRO</div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">CONTAINER SIMULATOR</div>
             
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
             <div class="btn-row" style="margin-bottom: 15px;">
-                <button id="btn20ft" class="filter-btn" onclick="setContainer(20)">20ft<br><span style="font-size:8px; font-weight:normal;">5.9 x 2.39</span></button>
-                <button id="btn40ft" class="filter-btn cont-active" onclick="setContainer(40)">40ft HC<br><span style="font-size:8px; font-weight:normal;">12.0 x 2.69</span></button>
+                <button id="btn20ft" class="filter-btn" onclick="setContainer(20)">20ft<br><span style="font-size:8px; font-weight:normal;">5.9 x 2.39 (入口2.28)</span></button>
+                <button id="btn40ft" class="filter-btn cont-active" onclick="setContainer(40)">40ft HC<br><span style="font-size:8px; font-weight:normal;">12.0 x 2.69 (入口2.585)</span></button>
             </div>
 
             <div class="btn-row">
@@ -243,6 +223,8 @@
     ];
 
     let C_C = 12.03, C_L = 2.35, C_A = 2.69; 
+    let C_DOOR_H = 2.585; 
+    const DOOR_DEPTH = 0.15; 
     let contType = 40;
 
     const scene = new THREE.Scene();
@@ -252,13 +234,11 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
-    
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
     
-    // --- OTIMIZAÇÃO DE ZOOM PARA NOTEBOOKS (TOUCHPAD MAIS RÁPIDO) ---
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
     controls.zoomSpeed = 2.5; 
-    controls.panSpeed = 1.2;
 
     window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     window.toggleMenu = () => { const p = document.getElementById('mainPanel'); p.classList.toggle('minimized'); document.getElementById('tglBtn').innerHTML = p.classList.contains('minimized') ? "メニュー<br>開く" : "メニュー<br>閉じる"; };
@@ -274,21 +254,36 @@
 
     const vigas = new THREE.Group(); scene.add(vigas);
     const beamMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 });
+    const doorHeaderMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.5 }); 
+    let doorHeaderMesh = null;
 
     function drawContainer() {
-        vigas.clear(); const bt = 0.08;
-        const addB = (w,h,d,x,y,z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), beamMat); m.position.set(x,y,z); vigas.add(m); }
-        addB(bt, C_A, bt, 0, C_A/2, -C_L/2); addB(bt, C_A, bt, 0, C_A/2, C_L/2); addB(bt, C_A, bt, C_C, C_A/2, -C_L/2); addB(bt, C_A, bt, C_C, C_A/2, C_L/2);
-        addB(C_C, bt, bt, C_C/2, 0, -C_L/2); addB(C_C, bt, bt, C_C/2, 0, C_L/2); addB(C_C, bt, bt, C_C/2, C_A, -C_L/2); addB(C_C, bt, bt, C_C/2, C_A, C_L/2);
-        addB(bt, bt, C_L, 0, 0, 0); addB(bt, bt, C_L, C_C, 0, 0); addB(bt, bt, C_L, 0, C_A, 0); addB(bt, bt, C_L, C_C, C_A, 0);
+        vigas.clear(); 
+        const bt = 0.08;
+        const addB = (w,h,d,x,y,z, mat = beamMat) => { 
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); 
+            m.position.set(x,y,z); 
+            vigas.add(m); 
+            return m;
+        };
         
-        // --- VIGA DA PORTA (ENTRADA) ---
-        // A entrada fica em X = C_C. A altura da porta é menor que o teto.
-        const doorH = contType === 40 ? 2.585 : 2.28;
-        const doorMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.8 }); // Amarelo
-        const doorBeam = new THREE.Mesh(new THREE.BoxGeometry(bt, bt, C_L), doorMat);
-        doorBeam.position.set(C_C, doorH, 0);
-        vigas.add(doorBeam);
+        addB(bt, C_A + bt*2, bt, -bt/2, C_A/2, -C_L/2 - bt/2); 
+        addB(bt, C_A + bt*2, bt, -bt/2, C_A/2, C_L/2 + bt/2); 
+        addB(bt, C_A + bt*2, bt, C_C + bt/2, C_A/2, -C_L/2 - bt/2); 
+        addB(bt, C_A + bt*2, bt, C_C + bt/2, C_A/2, C_L/2 + bt/2);
+        
+        addB(C_C, bt, bt, C_C/2, -bt/2, -C_L/2 - bt/2); 
+        addB(C_C, bt, bt, C_C/2, -bt/2, C_L/2 + bt/2); 
+        addB(C_C, bt, bt, C_C/2, C_A + bt/2, -C_L/2 - bt/2); 
+        addB(C_C, bt, bt, C_C/2, C_A + bt/2, C_L/2 + bt/2);
+        
+        addB(bt, bt, C_L, -bt/2, -bt/2, 0); 
+        addB(bt, bt, C_L, C_C + bt/2, -bt/2, 0); 
+        addB(bt, bt, C_L, -bt/2, C_A + bt/2, 0); 
+        addB(bt, bt, C_L, C_C + bt/2, C_A + bt/2, 0);
+        
+        const headerH = C_A - C_DOOR_H; 
+        doorHeaderMesh = addB(DOOR_DEPTH, headerH, C_L, DOOR_DEPTH / 2, C_DOOR_H + headerH / 2, 0, doorHeaderMat);
 
         light.position.set(C_C/2, C_A + 5, 0);
     }
@@ -302,12 +297,9 @@
     }
 
     window.setContainer = (size, bypassSave = false, skipResetView = false) => {
-        if (size === 20) { C_C = 5.90; C_A = 2.39; contType = 20; document.getElementById('btn20ft').classList.add('cont-active'); document.getElementById('btn40ft').classList.remove('cont-active'); } 
-        else { C_C = 12.03; C_A = 2.69; contType = 40; document.getElementById('btn40ft').classList.add('cont-active'); document.getElementById('btn20ft').classList.remove('cont-active'); }
-        drawContainer(); 
-        if (!skipResetView) resetView(); 
-        window.updateDim(); checkCol(); 
-        if(!bypassSave) saveState();
+        if (size === 20) { C_C = 5.90; C_A = 2.39; C_DOOR_H = 2.28; contType = 20; document.getElementById('btn20ft').classList.add('cont-active'); document.getElementById('btn40ft').classList.remove('cont-active'); } 
+        else { C_C = 12.03; C_A = 2.69; C_DOOR_H = 2.585; contType = 40; document.getElementById('btn40ft').classList.add('cont-active'); document.getElementById('btn20ft').classList.remove('cont-active'); }
+        drawContainer(); if (!skipResetView) resetView(); window.updateDim(); checkCol(); if(!bypassSave) saveState();
     };
 
     drawContainer(); resetView();
@@ -330,25 +322,39 @@
         return { mat: new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(can), transparent: true }), ratio: can.width/128 };
     }
 
+    // --- CORREÇÃO DO CANVAS DE TEXTO (Aumento para 512px) ---
     function addLine(p1, p2, txt, cor = 0xffffff) {
         const g = new THREE.Group();
         g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true })));
+        
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
-        can.width = 256; can.height = 128; ctx.fillStyle = cor; ctx.font = 'bold 50px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt, 128, 75);
+        
+        // Dobrei o tamanho para evitar cortes nas extremidades do texto
+        can.width = 512; 
+        can.height = 128; 
+        
+        ctx.fillStyle = cor; 
+        ctx.font = 'bold 42px sans-serif'; // Ajuste leve na fonte
+        ctx.textAlign = 'center'; 
+        ctx.fillText(txt, 256, 75); // Centralizado na nova largura (512/2 = 256)
+        
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can), depthTest: false, transparent: true }));
-        spr.position.copy(p1).lerp(p2, 0.5); if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.4; else spr.position.y += 0.25;
-        spr.scale.set(1.3, 0.65, 1); g.add(spr); return g;
+        spr.position.copy(p1).lerp(p2, 0.5); 
+        if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.5; else spr.position.y += 0.25;
+        
+        // Escala ajustada proporcionalmente ao novo tamanho panorâmico (largura x2 = 2.8)
+        spr.scale.set(2.8, 0.7, 1); 
+        g.add(spr); 
+        return g;
     }
 
     window.updateDim = () => {
         gDim.clear(); if (!showDim) return;
         const lCor = contType === 40 ? '#00e5ff' : '#a855f7';
         gDim.add(addLine(new THREE.Vector3(0,-1.2, C_L/2+1.0), new THREE.Vector3(C_C,-1.2, C_L/2+1.0), C_C.toFixed(2)+"m", lCor));
-        gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), C_A.toFixed(2)+"m", lCor));
+        gDim.add(addLine(new THREE.Vector3(C_C+0.6, 0, -C_L/2-0.6), new THREE.Vector3(C_C+0.6, C_A, -C_L/2-0.6), C_A.toFixed(2)+"m", lCor));
         
-        // --- MARCADOR DA PORTA DO CONTAINER ---
-        const doorH = contType === 40 ? 2.585 : 2.28;
-        gDim.add(addLine(new THREE.Vector3(C_C, 0, C_L/2+0.2), new THREE.Vector3(C_C, doorH, C_L/2+0.2), doorH.toFixed(3)+"m", '#eab308'));
+        gDim.add(addLine(new THREE.Vector3(-0.5, 0, -C_L/2-0.5), new THREE.Vector3(-0.5, C_DOOR_H, -C_L/2-0.5), C_DOOR_H.toFixed(3)+"m (入口)", '#f59e0b'));
 
         vehicles.forEach(v => {
             if (!v.visible || v.userData.type === "wood") return;
@@ -365,7 +371,7 @@
         const bodyGeo = new THREE.BoxGeometry(w, h, d); bodyGeo.translate(0, h/2, 0); 
         const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: cor })); g.add(body);
         
-        const outlineGeo = new THREE.BoxGeometry(w + 0.02, h + 0.02, d + 0.02); outlineGeo.translate(0, h/2, 0);
+        const outlineGeo = new THREE.BoxGeometry(w + 0.01, h + 0.01, d + 0.01); outlineGeo.translate(0, h/2, 0);
         const outline = new THREE.Mesh(outlineGeo, new THREE.MeshBasicMaterial({ color: 0x00f5ff, wireframe: true, transparent: true, opacity: 0.9, depthTest: false }));
         outline.visible = false; g.add(outline);
 
@@ -428,38 +434,37 @@
     window.openWoodModal = () => { document.getElementById('modalWood').style.display = 'flex'; };
     window.addWoodObject = () => {
         const len = parseFloat(document.getElementById('wLen').value); if (!len) return; closeModal('modalWood');
-        const v = createObj("Piso", "角材", len, 9, 9, "wood"); v.position.set(2, 0.01, 0); scene.add(v); vehicles.push(v); selecionado = v;
+        const v = createObj("Piso", "角材", len, 9, 9, "wood"); v.position.set(2, 0.0, 0); scene.add(v); vehicles.push(v); selecionado = v;
         window.updateDim(); checkCol(); saveState();
     };
 
     function injectObj(n, c, a, l) {
-        const v = createObj(targetL, n, c, a, l, "vehicle"); v.position.set(2, targetL === 'Topo' ? 1.2 : 0.01, 0); scene.add(v); vehicles.push(v); selecionado = v;
+        const v = createObj(targetL, n, c, a, l, "vehicle"); v.position.set(2, targetL === 'Topo' ? 1.2 : 0.0, 0); scene.add(v); vehicles.push(v); selecionado = v;
         window.updateDim(); checkCol(); saveState();
     }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (selecionado) { e.preventDefault(); deleteSelected(); }
+        }
+    });
 
     window.toggleSnap = () => { useSnap = !useSnap; const btn = document.getElementById('btnSnap'); if(useSnap) { btn.classList.add('edit-active'); btn.style.background = "var(--accent)"; } else { btn.classList.remove('edit-active'); btn.style.background = "#334155"; } };
     window.toggleFullscreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => alert("全画面表示エラー: " + err.message)); } else { document.exitFullscreen(); } };
     window.toggleUI = () => { const uiLayer = document.getElementById('ui-layer'); const btn = document.getElementById('btnHideUI'); if(uiLayer.classList.contains('ui-hidden')) { uiLayer.classList.remove('ui-hidden'); btn.innerHTML = "👁️ UI非表示"; btn.style.background = "rgba(30, 41, 59, 0.9)"; } else { uiLayer.classList.add('ui-hidden'); btn.innerHTML = "👁️ UI表示"; btn.style.background = "var(--accent)"; } };
     window.toggleMoveMode = () => { moveY = !moveY; const btn = document.getElementById('btnMode'); btn.innerHTML = moveY ? "↕️ 高さ" : "↔️ 水平"; btn.style.background = moveY ? "#b45309" : "#1e293b"; };
-    window.deleteSelected = () => { if (!selecionado) return; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); selecionado = null; document.getElementById('edit-panel').style.display = 'none'; window.updateDim(); checkCol(); saveState(); };
+    
+    window.deleteSelected = () => { 
+        if (!selecionado) return; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); selecionado = null; 
+        document.getElementById('edit-panel').style.display = 'none'; document.getElementById('btnEditToggle').classList.remove('edit-active'); editMode = false;
+        window.updateDim(); checkCol(); saveState(); 
+    };
+    
     window.copyVehicle = () => { if (!selecionado) return; const d = selecionado.userData; const c = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type); c.position.copy(selecionado.position); c.position.x += 0.4; scene.add(c); vehicles.push(c); selecionado = c; window.updateDim(); checkCol(); saveState(); };
     window.toggleVertical = () => { if (!selecionado) return; const d = selecionado.userData.dim; const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type, name = selecionado.userData.nome; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const n = createObj(lay, name, d.h, d.w, d.d, type); n.position.copy(pos); n.rotation.copy(rot); scene.add(n); vehicles.push(n); selecionado = n; window.updateDim(); checkCol(); saveState(); };
     window.liveUpdateName = () => { if (!selecionado) return; selecionado.userData.nome = document.getElementById('iN').value; };
     
-    // --- NOVO ATALHO DE TECLADO (Delete / Backspace) ---
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            // Verifica se o usuário não está apenas apagando uma letra na caixa de texto
-            const tag = document.activeElement.tagName.toLowerCase();
-            if (tag === 'input' || tag === 'textarea') return;
-            
-            if (selecionado) {
-                e.preventDefault();
-                deleteSelected();
-            }
-        }
-    });
-
     window.saveEdit = () => { 
         if (!selecionado) return; const n = document.getElementById('iN').value, w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value); const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type; 
         scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const nv = createObj(lay, n, w, h, d, type); nv.position.copy(pos); nv.rotation.copy(rot); scene.add(nv); vehicles.push(nv); selecionado = nv; 
@@ -485,23 +490,39 @@
     function updateHist() { const u = hIdx <= 0; const r = hIdx >= history.length - 1; document.getElementById('hUndo').disabled = u; document.getElementById('hRedo').disabled = r; }
 
     function checkCol() {
-        let e = false; scene.updateMatrixWorld(true); 
-        const doorH = contType === 40 ? 2.585 : 2.28;
+        let e = false; 
+        scene.updateMatrixWorld(true); 
+        
+        const eps = 0.0001; 
+        const doorBox = doorHeaderMesh ? new THREE.Box3().setFromObject(doorHeaderMesh) : null;
 
         vehicles.forEach(t => {
             const b = new THREE.Box3().setFromObject(t.userData.body);
-            let c = (b.min.x < -0.01 || b.max.x > C_C + 0.01 || b.min.z < -C_L/2 - 0.01 || b.max.z > C_L/2 + 0.01 || b.min.y < -0.01 || b.max.y > C_A + 0.01);
             
-            // --- COLISÃO COM A PORTA ---
-            // Se o trator estiver passando pela entrada (X = C_C) e for mais alto que a porta.
-            if (b.max.x > C_C - 0.2 && b.max.y > doorH + 0.01) {
+            let c = (
+                b.min.x < -eps || 
+                b.max.x > C_C + eps || 
+                b.min.z < -C_L/2 - eps || 
+                b.max.z > C_L/2 + eps || 
+                b.min.y < -eps || 
+                b.max.y > C_A + eps
+            );
+            
+            if (doorBox && b.clone().expandByScalar(-eps).intersectsBox(doorBox)) {
                 c = true;
             }
 
-            vehicles.forEach(o => { if (t !== o && b.clone().expandByScalar(-0.005).intersectsBox(new THREE.Box3().setFromObject(o.userData.body))) c = true; });
-            t.userData.body.material.color.setHex(c ? 0xef4444 : t.userData.corOrig); if (c) e = true;
+            vehicles.forEach(o => { 
+                if (t !== o && b.clone().expandByScalar(-eps).intersectsBox(new THREE.Box3().setFromObject(o.userData.body))) {
+                    c = true; 
+                }
+            });
+            
+            t.userData.body.material.color.setHex(c ? 0xef4444 : t.userData.corOrig); 
+            if (c) e = true;
         });
-        document.getElementById('alert').style.display = e ? 'block' : 'none'; highlightSelected();
+        document.getElementById('alert').style.display = e ? 'block' : 'none'; 
+        highlightSelected();
     }
 
     let dragging = false; const ray = new THREE.Raycaster(); const m = new THREE.Vector2(); const pXZ = new THREE.Plane(new THREE.Vector3(0,1,0), 0); const pY = new THREE.Plane(); const pI = new THREE.Vector3(), off = new THREE.Vector3();
@@ -536,24 +557,28 @@
             const snapT = 0.05; 
             let sDim = getCurrentWorldDim(selecionado); let mw = sDim.w; let md = sDim.d;
             
-            if (Math.abs((selecionado.position.x - mw/2) - 0) < snapT) selecionado.position.x = mw/2;
-            if (Math.abs((selecionado.position.x + mw/2) - C_C) < snapT) selecionado.position.x = C_C - mw/2;
-            if (Math.abs((selecionado.position.z - md/2) - (-C_L/2)) < snapT) selecionado.position.z = -C_L/2 + md/2;
-            if (Math.abs((selecionado.position.z + md/2) - C_L/2) < snapT) selecionado.position.z = C_L/2 - md/2;
-            
-            vehicles.forEach(o => {
-                if (o === selecionado || !o.visible) return;
-                let oDim = getCurrentWorldDim(o); let ow = oDim.w; let od = oDim.d;
+            if (!moveY) {
+                if (Math.abs((selecionado.position.x - mw/2) - 0) < snapT) selecionado.position.x = mw/2;
+                if (Math.abs((selecionado.position.x + mw/2) - C_C) < snapT) selecionado.position.x = C_C - mw/2;
+                if (Math.abs((selecionado.position.z - md/2) - (-C_L/2)) < snapT) selecionado.position.z = -C_L/2 + md/2;
+                if (Math.abs((selecionado.position.z + md/2) - C_L/2) < snapT) selecionado.position.z = C_L/2 - md/2;
                 
-                if (Math.abs(selecionado.position.z - o.position.z) < (md + od)/2 + 0.05) {
-                    if (Math.abs((selecionado.position.x - mw/2) - (o.position.x + ow/2)) < snapT) selecionado.position.x = o.position.x + ow/2 + mw/2;
-                    if (Math.abs((selecionado.position.x + mw/2) - (o.position.x - ow/2)) < snapT) selecionado.position.x = o.position.x - ow/2 - mw/2;
-                }
-                if (Math.abs(selecionado.position.x - o.position.x) < (mw + ow)/2 + 0.05) {
-                    if (Math.abs((selecionado.position.z - md/2) - (o.position.z + od/2)) < snapT) selecionado.position.z = o.position.z + od/2 + md/2;
-                    if (Math.abs((selecionado.position.z + md/2) - (o.position.z - od/2)) < snapT) selecionado.position.z = o.position.z - od/2 - md/2;
-                }
-            });
+                vehicles.forEach(o => {
+                    if (o === selecionado || !o.visible) return;
+                    let oDim = getCurrentWorldDim(o); let ow = oDim.w; let od = oDim.d;
+                    
+                    if (Math.abs(selecionado.position.z - o.position.z) < (md + od)/2 + 0.05) {
+                        if (Math.abs((selecionado.position.x - mw/2) - (o.position.x + ow/2)) < snapT) selecionado.position.x = o.position.x + ow/2 + mw/2;
+                        if (Math.abs((selecionado.position.x + mw/2) - (o.position.x - ow/2)) < snapT) selecionado.position.x = o.position.x - ow/2 - mw/2;
+                    }
+                    if (Math.abs(selecionado.position.x - o.position.x) < (mw + ow)/2 + 0.05) {
+                        if (Math.abs((selecionado.position.z - md/2) - (o.position.z + od/2)) < snapT) selecionado.position.z = o.position.z + od/2 + md/2;
+                        if (Math.abs((selecionado.position.z + md/2) - (o.position.z - od/2)) < snapT) selecionado.position.z = o.position.z - od/2 - md/2;
+                    }
+                });
+            } else {
+                if (Math.abs(selecionado.position.y) < snapT) selecionado.position.y = 0;
+            }
         }
 
         window.updateDim(); checkCol();
