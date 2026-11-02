@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>コンテナ積載シミュレーター</title>
+    <title>輸出積載シミュレーター v11.8</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -14,7 +14,6 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 0; box-sizing: border-box; }
         
-        /* CLASSE DE INVISIBILIDADE ABSOLUTA (Bypassa qualquer !important) */
         .ui-hidden { display: none !important; }
 
         /* Painel Lateral */
@@ -27,7 +26,6 @@
         }
         .panel.minimized { transform: translateX(-260px); }
 
-        /* Padrão Mobile: Alinhamento na parte inferior, seguro contra barras do sistema */
         .panel-handle { position: absolute; right: -50px; bottom: 110px; width: 50px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
         .handle-btn { background: #334155; border: 1px solid rgba(255,255,255,0.1); color: white; width: 48px; height: 48px; border-radius: 0 10px 10px 0; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; }
         
@@ -50,7 +48,6 @@
         .inp-g label { display: block; font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
         .inp-g input { width: 100%; background: #000; border: 1px solid #334155; border-radius: 4px; padding: 8px; color: var(--accent); font-weight: bold; box-sizing: border-box; }
 
-        /* Controles Inferiores Padrão */
         .controls-bottom { position: absolute; bottom: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: flex-end; z-index: 90; }
         .btn-group { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
         button.main { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
@@ -74,12 +71,10 @@
         .veh-item.selected { border-color: var(--accent); background: rgba(16, 185, 129, 0.15); }
         .veh-item span { opacity: 0.6; font-size: 11px; }
 
-        /* --- CONFIGURAÇÃO SMARTPHONE EM PÉ (PORTRAIT) --- */
         @media (max-width: 1023px) {
             .panel-handle { top: auto !important; bottom: 110px !important; }
         }
 
-        /* --- CONFIGURAÇÃO PARA PC (DESKTOP) --- */
         @media (min-width: 1024px) and (min-height: 601px) {
             button.main { padding: 18px 30px; font-size: 15px; border-radius: 14px; }
             .btn-group { gap: 12px; flex-direction: column !important; }
@@ -93,7 +88,6 @@
             #hRedo { order: 3 !important; }
         }
         
-        /* --- TRAVA DEFINITIVA PARA SMARTPHONE DEITADO (LANDSCAPE MOBILE) --- */
         @media (orientation: landscape) and (max-height: 600px) {
             .panel-handle { bottom: 105px !important; top: auto !important; }
             .controls-bottom { 
@@ -125,13 +119,12 @@
 </head>
 <body>
 
-<!-- BOTÕES FLUTUANTES (PERMANECEM SEMPRE ATIVOS) -->
+<!-- BOTÕES FLUTUANTES -->
 <div class="floating-top-right">
     <button class="float-btn" onclick="toggleFullscreen()">📱 全画面</button>
     <button id="btnHideUI" class="float-btn" onclick="toggleUI()">👁️ UI非表示</button>
 </div>
 
-<!-- CONTAINER DE INTERFACE (CHAVEADO DIRETAMENTE VIA JAVASCRIPT) -->
 <div id="ui-layer">
     <div id="mainPanel" class="panel">
         <div class="panel-handle">
@@ -141,7 +134,7 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">CONTAINER SIMULATOR</div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">JAPAN EXPORT PRO</div>
             
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
             <div class="btn-row" style="margin-bottom: 15px;">
@@ -259,8 +252,13 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
+    
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    
+    // --- OTIMIZAÇÃO DE ZOOM PARA NOTEBOOKS (TOUCHPAD MAIS RÁPIDO) ---
+    controls.zoomSpeed = 2.5; 
+    controls.panSpeed = 1.2;
 
     window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     window.toggleMenu = () => { const p = document.getElementById('mainPanel'); p.classList.toggle('minimized'); document.getElementById('tglBtn').innerHTML = p.classList.contains('minimized') ? "メニュー<br>開く" : "メニュー<br>閉じる"; };
@@ -283,6 +281,15 @@
         addB(bt, C_A, bt, 0, C_A/2, -C_L/2); addB(bt, C_A, bt, 0, C_A/2, C_L/2); addB(bt, C_A, bt, C_C, C_A/2, -C_L/2); addB(bt, C_A, bt, C_C, C_A/2, C_L/2);
         addB(C_C, bt, bt, C_C/2, 0, -C_L/2); addB(C_C, bt, bt, C_C/2, 0, C_L/2); addB(C_C, bt, bt, C_C/2, C_A, -C_L/2); addB(C_C, bt, bt, C_C/2, C_A, C_L/2);
         addB(bt, bt, C_L, 0, 0, 0); addB(bt, bt, C_L, C_C, 0, 0); addB(bt, bt, C_L, 0, C_A, 0); addB(bt, bt, C_L, C_C, C_A, 0);
+        
+        // --- VIGA DA PORTA (ENTRADA) ---
+        // A entrada fica em X = C_C. A altura da porta é menor que o teto.
+        const doorH = contType === 40 ? 2.585 : 2.28;
+        const doorMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.8 }); // Amarelo
+        const doorBeam = new THREE.Mesh(new THREE.BoxGeometry(bt, bt, C_L), doorMat);
+        doorBeam.position.set(C_C, doorH, 0);
+        vigas.add(doorBeam);
+
         light.position.set(C_C/2, C_A + 5, 0);
     }
 
@@ -338,6 +345,11 @@
         const lCor = contType === 40 ? '#00e5ff' : '#a855f7';
         gDim.add(addLine(new THREE.Vector3(0,-1.2, C_L/2+1.0), new THREE.Vector3(C_C,-1.2, C_L/2+1.0), C_C.toFixed(2)+"m", lCor));
         gDim.add(addLine(new THREE.Vector3(-0.8, 0, -C_L/2-0.8), new THREE.Vector3(-0.8, C_A, -C_L/2-0.8), C_A.toFixed(2)+"m", lCor));
+        
+        // --- MARCADOR DA PORTA DO CONTAINER ---
+        const doorH = contType === 40 ? 2.585 : 2.28;
+        gDim.add(addLine(new THREE.Vector3(C_C, 0, C_L/2+0.2), new THREE.Vector3(C_C, doorH, C_L/2+0.2), doorH.toFixed(3)+"m", '#eab308'));
+
         vehicles.forEach(v => {
             if (!v.visible || v.userData.type === "wood") return;
             let rDim = getCurrentWorldDim(v); let mw = rDim.w; let md = rDim.d; let mh = v.userData.dim.h / 100; const p = v.position;
@@ -427,26 +439,27 @@
 
     window.toggleSnap = () => { useSnap = !useSnap; const btn = document.getElementById('btnSnap'); if(useSnap) { btn.classList.add('edit-active'); btn.style.background = "var(--accent)"; } else { btn.classList.remove('edit-active'); btn.style.background = "#334155"; } };
     window.toggleFullscreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => alert("全画面表示エラー: " + err.message)); } else { document.exitFullscreen(); } };
-    
-    // --- CORREÇÃO CIRÚRGICA: Chaveia a classe oculta no pai direto de todas as interfaces ---
-    window.toggleUI = () => {
-        const uiLayer = document.getElementById('ui-layer');
-        const btn = document.getElementById('btnHideUI');
-        if(uiLayer.classList.contains('ui-hidden')) {
-            uiLayer.classList.remove('ui-hidden');
-            btn.innerHTML = "👁️ UI非表示"; btn.style.background = "rgba(30, 41, 59, 0.9)";
-        } else {
-            uiLayer.classList.add('ui-hidden');
-            btn.innerHTML = "👁️ UI表示"; btn.style.background = "var(--accent)";
-        }
-    };
-
+    window.toggleUI = () => { const uiLayer = document.getElementById('ui-layer'); const btn = document.getElementById('btnHideUI'); if(uiLayer.classList.contains('ui-hidden')) { uiLayer.classList.remove('ui-hidden'); btn.innerHTML = "👁️ UI非表示"; btn.style.background = "rgba(30, 41, 59, 0.9)"; } else { uiLayer.classList.add('ui-hidden'); btn.innerHTML = "👁️ UI表示"; btn.style.background = "var(--accent)"; } };
     window.toggleMoveMode = () => { moveY = !moveY; const btn = document.getElementById('btnMode'); btn.innerHTML = moveY ? "↕️ 高さ" : "↔️ 水平"; btn.style.background = moveY ? "#b45309" : "#1e293b"; };
     window.deleteSelected = () => { if (!selecionado) return; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); selecionado = null; document.getElementById('edit-panel').style.display = 'none'; window.updateDim(); checkCol(); saveState(); };
     window.copyVehicle = () => { if (!selecionado) return; const d = selecionado.userData; const c = createObj(d.layer, d.nome, d.dim.w, d.dim.h, d.dim.d, d.type); c.position.copy(selecionado.position); c.position.x += 0.4; scene.add(c); vehicles.push(c); selecionado = c; window.updateDim(); checkCol(); saveState(); };
     window.toggleVertical = () => { if (!selecionado) return; const d = selecionado.userData.dim; const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type, name = selecionado.userData.nome; scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const n = createObj(lay, name, d.h, d.w, d.d, type); n.position.copy(pos); n.rotation.copy(rot); scene.add(n); vehicles.push(n); selecionado = n; window.updateDim(); checkCol(); saveState(); };
     window.liveUpdateName = () => { if (!selecionado) return; selecionado.userData.nome = document.getElementById('iN').value; };
     
+    // --- NOVO ATALHO DE TECLADO (Delete / Backspace) ---
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            // Verifica se o usuário não está apenas apagando uma letra na caixa de texto
+            const tag = document.activeElement.tagName.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            
+            if (selecionado) {
+                e.preventDefault();
+                deleteSelected();
+            }
+        }
+    });
+
     window.saveEdit = () => { 
         if (!selecionado) return; const n = document.getElementById('iN').value, w = parseFloat(document.getElementById('iC').value), d = parseFloat(document.getElementById('iL').value), h = parseFloat(document.getElementById('iA').value); const pos = selecionado.position.clone(), rot = selecionado.rotation.clone(), lay = selecionado.userData.layer, type = selecionado.userData.type; 
         scene.remove(selecionado); vehicles.splice(vehicles.indexOf(selecionado), 1); const nv = createObj(lay, n, w, h, d, type); nv.position.copy(pos); nv.rotation.copy(rot); scene.add(nv); vehicles.push(nv); selecionado = nv; 
@@ -473,9 +486,18 @@
 
     function checkCol() {
         let e = false; scene.updateMatrixWorld(true); 
+        const doorH = contType === 40 ? 2.585 : 2.28;
+
         vehicles.forEach(t => {
             const b = new THREE.Box3().setFromObject(t.userData.body);
             let c = (b.min.x < -0.01 || b.max.x > C_C + 0.01 || b.min.z < -C_L/2 - 0.01 || b.max.z > C_L/2 + 0.01 || b.min.y < -0.01 || b.max.y > C_A + 0.01);
+            
+            // --- COLISÃO COM A PORTA ---
+            // Se o trator estiver passando pela entrada (X = C_C) e for mais alto que a porta.
+            if (b.max.x > C_C - 0.2 && b.max.y > doorH + 0.01) {
+                c = true;
+            }
+
             vehicles.forEach(o => { if (t !== o && b.clone().expandByScalar(-0.005).intersectsBox(new THREE.Box3().setFromObject(o.userData.body))) c = true; });
             t.userData.body.material.color.setHex(c ? 0xef4444 : t.userData.corOrig); if (c) e = true;
         });
