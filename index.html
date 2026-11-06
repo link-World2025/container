@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>輸出積載シミュレーター v12.1</title>
+    <title>輸出積載シミュレーター v12.2</title>
     <style>
         :root {
             --primary: #3b82f6; --accent: #10b981; --danger: #ef4444;
@@ -97,6 +97,14 @@
         
         .alert { background: var(--danger); color: white; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
     </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 <body>
 
@@ -202,26 +210,31 @@
     </div>
 </div>
 
-<script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
-</script>
-
 <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
- let dbTractors = []; // Começa vazio
+    // Catálogo padrão de segurança caso o JSON externo falhe ou ainda não exista
+    const fallbackTractors = [
+        { n: "KUBOTA L2201S", c: 246, l: 113, a: 135 },
+        { n: "YANMAR F16D", c: 230, l: 105, a: 130 },
+        { n: "ISEKI TU1700", c: 235, l: 110, a: 130 }
+    ];
 
-// Função para buscar o arquivo JSON
-async function carregarCatalogo() {
-    try {
-        const resposta = await fetch('tratores.json'); // Busca o arquivo na mesma pasta
-        dbTractors = await resposta.json();
-    } catch (erro) {
-        console.error("Erro ao carregar o catálogo:", erro);
-        alert("Catálogo de tratores não encontrado!");
+    let dbTractors = [];
+
+    async function carregarCatalogo() {
+        try {
+            // O parâmetro ?v= evita que o navegador fique preso em cache antigo quando você atualizar o JSON
+            const resposta = await fetch('./tratores.json?v=' + Date.now());
+            if (!resposta.ok) throw new Error('HTTP ' + resposta.status);
+            dbTractors = await resposta.json();
+            console.log("Catálogo carregado com sucesso:", dbTractors.length, "máquinas.");
+        } catch (erro) {
+            console.warn("Aviso: Não foi possível carregar tratores.json. Usando catálogo interno de segurança.", erro);
+            dbTractors = fallbackTractors;
+        }
     }
-}
 
     let C_C = 12.03, C_L = 2.35, C_A = 2.69; 
     let C_DOOR_H = 2.585; 
@@ -323,27 +336,23 @@ async function carregarCatalogo() {
         return { mat: new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(can), transparent: true }), ratio: can.width/128 };
     }
 
-    // --- CORREÇÃO DO CANVAS DE TEXTO (Aumento para 512px) ---
     function addLine(p1, p2, txt, cor = 0xffffff) {
         const g = new THREE.Group();
         g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), new THREE.LineBasicMaterial({ color: cor, depthTest: false, transparent: true })));
         
         const can = document.createElement('canvas'); const ctx = can.getContext('2d');
-        
-        // Dobrei o tamanho para evitar cortes nas extremidades do texto
         can.width = 512; 
         can.height = 128; 
         
         ctx.fillStyle = cor; 
-        ctx.font = 'bold 42px sans-serif'; // Ajuste leve na fonte
+        ctx.font = 'bold 42px sans-serif'; 
         ctx.textAlign = 'center'; 
-        ctx.fillText(txt, 256, 75); // Centralizado na nova largura (512/2 = 256)
+        ctx.fillText(txt, 256, 75); 
         
         const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(can), depthTest: false, transparent: true }));
         spr.position.copy(p1).lerp(p2, 0.5); 
         if (Math.abs(p1.y - p2.y) > 0.1) spr.position.x += 0.5; else spr.position.y += 0.25;
         
-        // Escala ajustada proporcionalmente ao novo tamanho panorâmico (largura x2 = 2.8)
         spr.scale.set(2.8, 0.7, 1); 
         g.add(spr); 
         return g;
@@ -408,7 +417,7 @@ async function carregarCatalogo() {
 
     function renderList(query) {
         const list = document.getElementById('vehList'); list.innerHTML = '';
-        const filt = dbTractors.filter(t => t.n.toLowerCase().includes(query.toLowerCase())); if(selIdx >= filt.length + 1) selIdx = 0;
+        const filt = dbTractors.filter(t => t.n && t.n.toLowerCase().includes(query.toLowerCase())); if(selIdx >= filt.length + 1) selIdx = 0;
         filt.forEach((t, i) => {
             const d = document.createElement('div'); d.className = 'veh-item' + (i === selIdx ? ' selected' : '');
             d.innerHTML = `<div>${t.n}</div> <span>${t.c} x ${t.l} x ${t.a} cm</span>`;
@@ -595,10 +604,15 @@ async function carregarCatalogo() {
 
     window.addEventListener('beforeunload', (e) => { if (vehicles.length > 0) { e.preventDefault(); e.returnValue = ''; } });
 
- window.onload = async () => { 
-    await carregarCatalogo(); // Espera carregar o arquivo JSON
-    saveState(); 
-};
+    // Inicialização direta e segura para módulos ES6
+    async function init() {
+        saveState();
+        await carregarCatalogo();
+    }
+    init();
+
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+    animate();
 </script>
 
 </body>
