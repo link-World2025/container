@@ -114,7 +114,7 @@
         </div>
         
         <div class="panel-content">
-            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">CONTAINER SIMULATOR</div>
+            <div style="color:var(--accent); font-weight:800; font-size:16px; margin-bottom:10px; letter-spacing: 1px;">JAPAN EXPORT PRO</div>
             
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">コンテナサイズ選択</div>
             <div class="btn-row" style="margin-bottom: 15px;">
@@ -210,17 +210,18 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    const dbTractors = [
-        { n: "KUBOTA L2201S", c: 246, l: 113, a: 135 },
-        { n: "YANMAR F16D", c: 230, l: 105, a: 130 },
-        { n: "ISEKI TU1700", c: 235, l: 110, a: 130 },
-        { n: "KUBOTA GL200", c: 270, l: 125, a: 145 },
-        { n: "KUBOTA B1400", c: 215, l: 105, a: 125 },
-        { n: "YANMAR Ke-4", c: 210, l: 100, a: 125 },
-        { n: "YANMAR AF22", c: 260, l: 115, a: 135 },
-        { n: "ISEKI TX1500", c: 200, l: 105, a: 120 },
-        { n: "MITSUBISHI MT160", c: 220, l: 105, a: 125 }
-    ];
+ let dbTractors = []; // Começa vazio
+
+// Função para buscar o arquivo JSON
+async function carregarCatalogo() {
+    try {
+        const resposta = await fetch('tratores.json'); // Busca o arquivo na mesma pasta
+        dbTractors = await resposta.json();
+    } catch (erro) {
+        console.error("Erro ao carregar o catálogo:", erro);
+        alert("Catálogo de tratores não encontrado!");
+    }
+}
 
     let C_C = 12.03, C_L = 2.35, C_A = 2.69; 
     let C_DOOR_H = 2.585; 
@@ -594,9 +595,10 @@
 
     window.addEventListener('beforeunload', (e) => { if (vehicles.length > 0) { e.preventDefault(); e.returnValue = ''; } });
 
-    window.onload = () => { saveState(); };
-    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-    animate();
+ window.onload = async () => { 
+    await carregarCatalogo(); // Espera carregar o arquivo JSON
+    saveState(); 
+};
 </script>
 
 </body>
